@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser(description='Identify off-target candidates fro
 parser.add_argument('--ref', help='Reference Genome Fasta', required=True)
 parser.add_argument('--bam', help='Sorted BAM file', required=True)
 parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
+parser.add_argument('--reads', help='Read threshold', default=3)
 args = parser.parse_args()
 
 ### 1. Tabulate the start positions for the 2nd read in pair across the genome.
@@ -67,7 +68,7 @@ def output_alignments(ga, ga_windows, reference_genome):
     for iv, value in ga_windows.steps():
         if value:
             count = sum(list(ga[iv]))
-            if count >= 3:
+            if count >= args.reads:
                 window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
                 sequence, mismatches, length, strand,  target_start_relative, target_end_relative = align_sequences(target_sequence, window_sequence)
                 if strand == "+":
