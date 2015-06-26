@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser(description='Identify off-target candidates fro
 parser.add_argument('--ref', help='Reference Genome Fasta', required=True)
 parser.add_argument('--bam', help='Sorted BAM file', required=True)
 parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
-parser.add_argument('--reads', help='Read threshold', default=3)
+parser.add_argument('--reads', help='Read threshold', default=3, type=int)
 args = parser.parse_args()
 
 ### 1. Tabulate the start positions for the 2nd read in pair across the genome.
@@ -31,8 +31,8 @@ def tabulate_start_positions(BamFileName):
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
 
-    # for read in itertools.islice( sorted_bam_file, 1000000 ):  # printing first N reads
-    for read in sorted_bam_file:
+    for read in itertools.islice( sorted_bam_file, 1000000 ):  # printing first N reads
+    # for read in sorted_bam_file:
         if read.pe_which == "second" and read.aligned and read.aQual >= 50:
             iv = read.iv
             chr = iv.chrom
