@@ -21,6 +21,8 @@ parser.add_argument('--ref', help='Reference Genome Fasta', required=True)
 parser.add_argument('--bam', help='Sorted BAM file', required=True)
 parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
 parser.add_argument('--reads', help='Read threshold', default=3, type=int)
+parser.add_argument('--windowsize', help='Read threshold', default=1, type=int)
+parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
 args = parser.parse_args()
 
 ### 1. Tabulate the start positions for the 2nd read in pair across the genome.
@@ -31,7 +33,7 @@ def tabulate_start_positions(BamFileName):
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
 
-    # for read in itertools.islice( sorted_bam_file, 1000000 ):  # printing first N reads
+    # for read in itertools.islice( sorted_bam_file, 100000 ):  # printing first N reads
     for read in sorted_bam_file:
         if read.pe_which == "second" and read.aligned and read.aQual >= 50:
             iv = read.iv
@@ -47,7 +49,7 @@ def tabulate_start_positions(BamFileName):
     return ga, ga_windows, ga_stranded
 
 ###  2. Find genomic windows (coordinate positions)
-def find_windows(ga_windows, window_size=3):
+def find_windows(ga_windows, window_size):
     # Initialize comparison position
     last = HTSeq.GenomicInterval("0", 0, 0)
     # Iterate through window GenomicArray and consolidate windows that are within 3 bp
@@ -77,7 +79,10 @@ def output_alignments(ga, ga_windows, reference_genome):
                 elif strand == "-":
                     target_start_absolute = iv.end + 20 - target_end_relative
                     target_end_absolute = iv.end + 20 - target_start_relative
-                if sequence:
+                else:
+                    target_start_absolute = iv.start
+                    target_end_absolute = iv.end
+                if sequence or args.nofilter:
                     name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
                     read_count = sum(list(ga[iv]))
                     print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
@@ -130,7 +135,7 @@ def main():
     print("Reference genome loaded.", file=sys.stderr)
     ga, ga_windows, ga_stranded = tabulate_start_positions(args.bam)
     print("Tabulate start positions.", file=sys.stderr)
-    ga_consolidated_windows = find_windows(ga_windows)
+    ga_consolidated_windows = find_windows(ga_windows, args.windowsize)
     print("Get consolidated windows.", file=sys.stderr)
     output_alignments(ga, ga_consolidated_windows, reference_genome)
     print("Get alignments.", file=sys.stderr)
