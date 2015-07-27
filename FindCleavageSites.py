@@ -11,6 +11,7 @@ __author__ = 'shengdar'
 import argparse
 import HTSeq
 import itertools
+import os
 import pyfaidx
 import string
 import swalign
@@ -33,8 +34,8 @@ def tabulate_start_positions(BamFileName):
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
 
-    # for read in itertools.islice( sorted_bam_file, 100000 ):  # printing first N reads
-    for read in sorted_bam_file:
+    for read in itertools.islice( sorted_bam_file, 100000 ):  # printing first N reads
+    # for read in sorted_bam_file:
         if read.pe_which == "second" and read.aligned and read.aQual >= 50:
             iv = read.iv
             chr = iv.chrom
@@ -85,8 +86,9 @@ def output_alignments(ga, ga_windows, reference_genome):
                 if sequence or args.nofilter:
                     name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
                     read_count = sum(list(ga[iv]))
+                    filename = os.path.basename(args.bam)
                     print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
-                          iv.start, iv.end, window_sequence, sequence, mismatches, length, args.bam, sep="\t")
+                          iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, sep="\t")
 
 ### Smith-Waterman alignment of sequences
 def align_sequences(ref_seq, query_seq):
