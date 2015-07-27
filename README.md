@@ -13,6 +13,3 @@ python /data/joung/bitbucket/invitro-guide-seq/FindCleavageSites.py --reads 3 \
 --bam /data/joung/sequencing_fastq/150529_M01326_0203_000000000-AEENP/BAM/SQT01_S1.bam \
 --ref /data/joung/genomes/Homo_sapiens_assembly19.fasta --targetsite GGGTGGGGGGAGTTTGCTCCNGG > VEGFA_1_ivgs.bed
 ```
-=======
-This is a repository for code for in vitro GUIDE-seq.
->>>>>>> Stashed changes
