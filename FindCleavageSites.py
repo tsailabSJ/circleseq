@@ -10,7 +10,7 @@ __author__ = 'shengdar'
 
 import argparse
 import HTSeq
-import itertools
+# import itertools
 import os
 import pyfaidx
 import string
@@ -34,8 +34,8 @@ def tabulate_start_positions(BamFileName):
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
 
-    for read in itertools.islice( sorted_bam_file, 100000 ):  # printing first N reads
-    # for read in sorted_bam_file:
+    # for read in itertools.islice( sorted_bam_file, 100000 ):  # printing first N reads
+    for read in sorted_bam_file:
         if read.pe_which == "second" and read.aligned and read.aQual >= 50:
             iv = read.iv
             chr = iv.chrom
