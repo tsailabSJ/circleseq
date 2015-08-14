@@ -24,6 +24,8 @@ parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
 parser.add_argument('--reads', help='Read threshold', default=3, type=int)
 parser.add_argument('--windowsize', help='Read threshold', default=1, type=int)
 parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
+parser.add_argument('--readstrand', help='Target read strand (first/second)', default="second")
+
 args = parser.parse_args()
 
 ### 1. Tabulate the start positions for the 2nd read in pair across the genome.
@@ -36,7 +38,7 @@ def tabulate_start_positions(BamFileName):
 
     # for read in itertools.islice( sorted_bam_file, 100000 ):  # printing first N reads
     for read in sorted_bam_file:
-        if read.pe_which == "second" and read.aligned and read.aQual >= 50:
+        if read.pe_which == args.readstrand and read.aligned and read.aQual >= 50:
             iv = read.iv
             chr = iv.chrom
             position = iv.start_d
