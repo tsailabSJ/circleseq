@@ -21,10 +21,9 @@ parser = argparse.ArgumentParser(description='Identify off-target candidates fro
 parser.add_argument('--ref', help='Reference Genome Fasta', required=True)
 parser.add_argument('--bam', help='Sorted BAM file', required=True)
 parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
-parser.add_argument('--reads', help='Read threshold', default=3, type=int)
+parser.add_argument('--reads', help='Read threshold', default=2, type=int)
 parser.add_argument('--windowsize', help='Read threshold', default=1, type=int)
 parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
-parser.add_argument('--readstrand', help='Target read strand (first/second/both)', default="second")
 
 args = parser.parse_args()
 
@@ -36,19 +35,35 @@ def tabulate_start_positions(BamFileName):
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
 
-    # for read in itertools.islice( sorted_bam_file, 100000 ):  # printing first N reads
-    for read in sorted_bam_file:
-        if (read.pe_which == args.readstrand or args.readstrand == "both") and read.aligned and read.aQual >= 50:
-            iv = read.iv
-            chr = iv.chrom
-            position = iv.start_d
-            strand = iv.strand
-            ga[HTSeq.GenomicPosition(chr, position, strand)] += 1
-            ga_windows[HTSeq.GenomicPosition(chr, position, strand)] = 1
-            ga_stranded[HTSeq.GenomicPosition(chr, position, strand)] += 1
+    for bundle in HTSeq.pair_SAM_alignments(sorted_bam_file, bundle=True):
+        if len(bundle) >= 1:
+            for pair in bundle:
+                    if pair:
+                        first_read, second_read = pair
+                        if (first_read is not None) and (second_read is not None):
+                             if first_read.aligned and second_read.aligned:
+                                first_read_chr = first_read.iv.chrom
+                                first_read_position = first_read.iv.start_d
+                                first_read_strand = first_read.iv.strand
+
+                                second_read_chr = second_read.iv.chrom
+                                second_read_position = second_read.iv.start_d
+                                second_read_strand = second_read.iv.strand
+
+                                if (first_read_chr == second_read_chr) and (abs(first_read_position - second_read_position) <= 6):
+                                    # print(read_count, first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand)
+                                    ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                                    ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                                    ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+
+                                    ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                                    ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                                    ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+
         read_count += 1
         if not read_count % 100000:
             print(read_count/float(1000000), end=" ", file=sys.stderr)
+
     return ga, ga_windows, ga_stranded
 
 ###  2. Find genomic windows (coordinate positions)
