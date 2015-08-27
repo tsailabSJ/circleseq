@@ -38,27 +38,27 @@ def tabulate_start_positions(BamFileName):
     for bundle in HTSeq.pair_SAM_alignments(sorted_bam_file, bundle=True):
         if len(bundle) >= 1:
             for pair in bundle:
-                    if pair:
-                        first_read, second_read = pair
-                        if (first_read is not None) and (second_read is not None):
-                             if first_read.aligned and second_read.aligned:
-                                first_read_chr = first_read.iv.chrom
-                                first_read_position = first_read.iv.start_d
-                                first_read_strand = first_read.iv.strand
+                if pair:
+                    first_read, second_read = pair
+                    if (first_read is not None) and (second_read is not None):
+                        if first_read.aligned and second_read.aligned:
+                            first_read_chr = first_read.iv.chrom
+                            first_read_position = first_read.iv.start_d
+                            first_read_strand = first_read.iv.strand
 
-                                second_read_chr = second_read.iv.chrom
-                                second_read_position = second_read.iv.start_d
-                                second_read_strand = second_read.iv.strand
+                            second_read_chr = second_read.iv.chrom
+                            second_read_position = second_read.iv.start_d
+                            second_read_strand = second_read.iv.strand
 
-                                if (first_read_chr == second_read_chr) and (abs(first_read_position - second_read_position) <= 6):
-                                    # print(read_count, first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand)
-                                    ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                                    ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-                                    ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                            if (first_read_chr == second_read_chr) and (abs(first_read_position - second_read_position) <= 6):
+                                ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                                ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                                ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
 
-                                    ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                                    ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-                                    ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                                ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                                ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                                ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+
 
         read_count += 1
         if not read_count % 100000:
