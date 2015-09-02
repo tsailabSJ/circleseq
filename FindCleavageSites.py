@@ -38,7 +38,7 @@ def tabulate_start_positions(BamFileName):
 
     # for read in itertools.islice( sorted_bam_file, 100000 ):  # printing first N reads
     for read in sorted_bam_file:
-        if read.pe_which == args.readstrand and read.aligned and read.aQual >= 50:
+        if read.pe_which == args.readstrand and read.aligned and read.aQual >= 30:
             iv = read.iv
             chr = iv.chrom
             position = iv.start_d
