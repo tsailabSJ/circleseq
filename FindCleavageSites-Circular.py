@@ -22,7 +22,7 @@ parser.add_argument('--ref', help='Reference Genome Fasta', required=True)
 parser.add_argument('--bam', help='Sorted BAM file', required=True)
 parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
 parser.add_argument('--reads', help='Read threshold', default=2, type=int)
-parser.add_argument('--windowsize', help='Read threshold', default=1, type=int)
+parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
 parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
 
 args = parser.parse_args()
