@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser(description='Identify off-target candidates fro
 parser.add_argument('--ref', help='Reference Genome Fasta', required=True)
 parser.add_argument('--bam', help='Sorted BAM file', required=True)
 parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
-parser.add_argument('--reads', help='Read threshold', default=2, type=int)
+parser.add_argument('--reads', help='Read threshold', default=4, type=int)
 parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
 parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
 
@@ -52,19 +52,39 @@ def tabulate_start_positions(BamFileName):
                     pair_ok = True
         elif len(bundle) > 1:
             first_read_list, second_read_list = zip(*bundle)
-            first_read_list = [read for read in first_read_list if read if read.aligned if read.cigar[0].type == 'M']
-            second_read_list = [read for read in second_read_list if read if read.aligned if read.cigar[0].type == 'M']
-            if len(first_read_list) == 1 and len(second_read_list) == 1: # there is a boundary case where there are multiple alignments for one of the reads
-                first_read = first_read_list[0]
+            filtered_first_read_list = []
+            filtered_second_read_list = []
+            for read in first_read_list:
+                if read:
+                    if read.aligned:
+                        if read.iv.strand == '+':
+                            if read.cigar[0].type == 'M':
+                                filtered_first_read_list.append(read)
+                        elif read.iv.strand == '-':
+                            if read.cigar[-1].type == 'M':
+                                filtered_first_read_list.append(read)
+            for read in second_read_list:
+                if read:
+                    if read.aligned:
+                        if read.iv.strand == '+':
+                            if read.cigar[0].type == 'M':
+                                filtered_second_read_list.append(read)
+                        elif read.iv.strand == '-':
+                            if read.cigar[-1].type == 'M':
+                                filtered_second_read_list.append(read)
+            if len(filtered_first_read_list) == 1 and len(filtered_second_read_list) == 1: # there is a boundary case where there are multiple alignments for one of the reads
+                first_read = filtered_first_read_list[0]
                 first_read_chr = first_read.iv.chrom
                 first_read_position = first_read.iv.start_d
                 first_read_strand = first_read.iv.strand
 
-                second_read = second_read_list[0]
+                second_read = filtered_second_read_list[0]
                 second_read_chr = second_read.iv.chrom
                 second_read_position = second_read.iv.start_d
                 second_read_strand = second_read.iv.strand
                 pair_ok = True
+            elif len(filtered_first_read_list) > 1 or len(filtered_second_read_list) > 1: # there is a boundary case where there are multiple alignments for one of the reads:
+                print("?")
 
         # Only count pairs where they originate from within 6 bp start positions
         if pair_ok and (first_read_chr == second_read_chr) and (abs(first_read_position - second_read_position) <= 6):
