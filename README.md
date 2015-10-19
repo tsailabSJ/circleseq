@@ -1,9 +1,10 @@
-Comprehensive In vitro Reporting of CLeavage Effects by Sequencing (CIRCLE-seq)
-===============================================================================
+**CIRCLE-seq: Comprehensive In vitro Reporting of CLeavage Effects by Sequencing**
+==================================================================================
+
 This is a repository for CIRCLE-seq analytical software, which takes sample-specific paired end FASTQ files as input and produces a list of CIRCLE-seq detected off-target cleavage sites as output.
 
-Usage
-=====
+**Usage**
+=========
 
 1. The first step is to map the reads to the human reference genome using bwa.
 
