@@ -6,6 +6,8 @@ This is a repository for CIRCLE-seq analytical software, which takes sample-spec
 **Usage**
 =========
 
+The files used in the example are located in `/data/joung/CIRCLE-Seq/optimized_test3_K562s_151013`
+
 1. The first step is to map the reads to the human reference genome using bwa.
 
 ```
