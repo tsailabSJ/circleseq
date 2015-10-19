@@ -22,7 +22,7 @@ samtools index 1025_S1_L001.bam
 samtools sort -n 1025_S1_L001.bam 1025_S1_L001_sorted
 ```
 
-3. The final step is to run FindCleavageSites-Circular.py to identify CIRCLE-seq Cas9 off-target cleavage sites.
+3. The final step is to run FindCleavageSites-Circular.py on the sorted BAM files to identify CIRCLE-seq Cas9 off-target cleavage sites.
 
 
 ```
