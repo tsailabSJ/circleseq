@@ -1,9 +1,7 @@
-# CIRCLE-seq README #
-
+# Comprehensive In vitro Reporting of CLeavage Effects by Sequencing CIRCLE-seq README #
 This is a repository for CIRCLE-seq analytical software, which takes sample-specific paired end FASTQ files as input and produces a list of CIRCLE-seq detected off-target cleavage sites as output.
 
 ## Current CIRCLE-seq workflow##
-
 This is a repository for programs associated with analysis of Comprehensive In vitro Reporting of CLeavage Effects by Sequencing (CIRCLE-seq).
 
 1. The first step is to map the reads to the human reference genome using bwa.
