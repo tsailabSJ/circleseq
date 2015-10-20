@@ -24,6 +24,8 @@ parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
 parser.add_argument('--reads', help='Read threshold', default=4, type=int)
 parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
 parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
+parser.add_argument('--name', help='Targetsite Name', required=False)
+parser.add_argument('--cells', help='Cells', required=False)
 
 args = parser.parse_args()
 
@@ -141,10 +143,13 @@ def output_alignments(ga, ga_windows, reference_genome):
                     target_end_absolute = iv.end
                 if sequence or args.nofilter:
                     name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
-                    read_count = sum(list(ga[iv]))
+                    read_count = int(sum(list(ga[iv])))
                     filename = os.path.basename(args.bam)
+                    target_name = args.name
+                    target_cells = args.cells
+                    full_name = target_name + '_' + target_cells + '_' + name + '_' + str(read_count)
                     print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
-                          iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, sep="\t")
+                          iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name, target_cells, full_name, sep="\t")
 
 ### Smith-Waterman alignment of sequences
 def align_sequences(ref_seq, query_seq):
