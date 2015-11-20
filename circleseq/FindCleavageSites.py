@@ -32,75 +32,83 @@ args = parser.parse_args()
 ### 1. Tabulate the start positions for the 2nd read in pair across the genome.
 def tabulate_start_positions(BamFileName):
     sorted_bam_file = HTSeq.BAM_Reader(BamFileName)
+    filename_base = os.path.basename(BamFileName)
     ga = HTSeq.GenomicArray("auto", stranded=False)
     ga_windows = HTSeq.GenomicArray("auto", stranded=False)
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
+    output_filename = '{0}_coordinates.txt'.format(args.name)
 
+    with open(output_filename, 'w', 0) as o:
+        header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
+                  'Read2_chr', 'Read1_start_position', 'Read2_strand']
+        print(*header, sep='\t', file=o)
+        for bundle in HTSeq.pair_SAM_alignments(sorted_bam_file, bundle=True):
+            pair_ok = False
+            if len(bundle) == 1:
+                first_read, second_read = bundle[0]
+                if (first_read is not None) and (second_read is not None):
+                    if first_read.aligned and second_read.aligned:
+                        first_read_chr = first_read.iv.chrom
+                        first_read_position = first_read.iv.start_d
+                        first_read_strand = first_read.iv.strand
 
-    for bundle in HTSeq.pair_SAM_alignments(sorted_bam_file, bundle=True):
-        pair_ok = False
-        if len(bundle) == 1:
-            first_read, second_read = bundle[0]
-            if (first_read is not None) and (second_read is not None):
-                if first_read.aligned and second_read.aligned:
+                        second_read_chr = second_read.iv.chrom
+                        second_read_position = second_read.iv.start_d
+                        second_read_strand = second_read.iv.strand
+                        pair_ok = True
+            elif len(bundle) > 1:
+                first_read_list, second_read_list = zip(*bundle)
+                filtered_first_read_list = []
+                filtered_second_read_list = []
+                for read in first_read_list:
+                    if read:
+                        if read.aligned:
+                            if read.iv.strand == '+':
+                                if read.cigar[0].type == 'M':
+                                    filtered_first_read_list.append(read)
+                            elif read.iv.strand == '-':
+                                if read.cigar[-1].type == 'M':
+                                    filtered_first_read_list.append(read)
+                for read in second_read_list:
+                    if read:
+                        if read.aligned:
+                            if read.iv.strand == '+':
+                                if read.cigar[0].type == 'M':
+                                    filtered_second_read_list.append(read)
+                            elif read.iv.strand == '-':
+                                if read.cigar[-1].type == 'M':
+                                    filtered_second_read_list.append(read)
+                if len(filtered_first_read_list) == 1 and len(filtered_second_read_list) == 1: # there is a boundary case where there are multiple alignments for one of the reads
+                    first_read = filtered_first_read_list[0]
                     first_read_chr = first_read.iv.chrom
                     first_read_position = first_read.iv.start_d
                     first_read_strand = first_read.iv.strand
 
+                    second_read = filtered_second_read_list[0]
                     second_read_chr = second_read.iv.chrom
                     second_read_position = second_read.iv.start_d
                     second_read_strand = second_read.iv.strand
                     pair_ok = True
-        elif len(bundle) > 1:
-            first_read_list, second_read_list = zip(*bundle)
-            filtered_first_read_list = []
-            filtered_second_read_list = []
-            for read in first_read_list:
-                if read:
-                    if read.aligned:
-                        if read.iv.strand == '+':
-                            if read.cigar[0].type == 'M':
-                                filtered_first_read_list.append(read)
-                        elif read.iv.strand == '-':
-                            if read.cigar[-1].type == 'M':
-                                filtered_first_read_list.append(read)
-            for read in second_read_list:
-                if read:
-                    if read.aligned:
-                        if read.iv.strand == '+':
-                            if read.cigar[0].type == 'M':
-                                filtered_second_read_list.append(read)
-                        elif read.iv.strand == '-':
-                            if read.cigar[-1].type == 'M':
-                                filtered_second_read_list.append(read)
-            if len(filtered_first_read_list) == 1 and len(filtered_second_read_list) == 1: # there is a boundary case where there are multiple alignments for one of the reads
-                first_read = filtered_first_read_list[0]
-                first_read_chr = first_read.iv.chrom
-                first_read_position = first_read.iv.start_d
-                first_read_strand = first_read.iv.strand
+                elif len(filtered_first_read_list) > 1 or len(filtered_second_read_list) > 1: # there is a boundary case where there are multiple alignments for one of the reads:
+                    print("?")
 
-                second_read = filtered_second_read_list[0]
-                second_read_chr = second_read.iv.chrom
-                second_read_position = second_read.iv.start_d
-                second_read_strand = second_read.iv.strand
-                pair_ok = True
-            elif len(filtered_first_read_list) > 1 or len(filtered_second_read_list) > 1: # there is a boundary case where there are multiple alignments for one of the reads:
-                print("?")
+            # Only count pairs where they originate from within 6 bp start positions
+            if pair_ok and (first_read_chr == second_read_chr) and (abs(first_read_position - second_read_position) <= 6):
+                ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
 
-        # Only count pairs where they originate from within 6 bp start positions
-        if pair_ok and (first_read_chr == second_read_chr) and (abs(first_read_position - second_read_position) <= 6):
-            ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-            ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-            ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
 
-            ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-            ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-            ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                print(args.name, args.targetsite, args.cells, filename_base, first_read_chr, first_read_position,
+                      first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
 
-        read_count += 1
-        if not read_count % 100000:
-            print(read_count/float(1000000), end=" ", file=sys.stderr)
+            read_count += 1
+            if not read_count % 100000:
+                print(read_count/float(1000000), end=" ", file=sys.stderr)
 
     return ga, ga_windows, ga_stranded
 
