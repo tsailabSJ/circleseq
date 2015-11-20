@@ -37,7 +37,7 @@ def tabulate_start_positions(BamFileName):
     ga_windows = HTSeq.GenomicArray("auto", stranded=False)
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
-    output_filename = '{0}_coordinates.txt'.format(args.name)
+    output_filename = '{0}_{1}_coordinates.txt'.format(args.cell, args.name)
 
     with open(output_filename, 'w', 0) as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
