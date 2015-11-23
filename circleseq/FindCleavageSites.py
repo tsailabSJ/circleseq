@@ -39,7 +39,7 @@ def tabulate_start_positions(BamFileName):
     read_count = 0
     output_filename = '{0}_{1}_coordinates.txt'.format(args.cells, args.name)
 
-    with open(output_filename, 'w', 0) as o:
+    with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
                   'Read2_chr', 'Read1_start_position', 'Read2_strand']
         print(*header, sep='\t', file=o)
