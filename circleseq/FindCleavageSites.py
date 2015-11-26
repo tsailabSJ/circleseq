@@ -1,9 +1,3 @@
-# IdentifyOffTargetSiteSequences.py
-# Shengdar Tsai (stsai4@mgh.harvard.edu)
-
-# A program to identify Cas9 off-target sites from in vitro GUIDE-seq data
-
-
 from __future__ import print_function
 
 __author__ = 'shengdar'
@@ -17,20 +11,9 @@ import string
 import swalign
 import sys
 
-parser = argparse.ArgumentParser(description='Identify off-target candidates from Illumina short read sequencing data.')
-parser.add_argument('--ref', help='Reference Genome Fasta', required=True)
-parser.add_argument('--bam', help='Sorted BAM file', required=True)
-parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
-parser.add_argument('--reads', help='Read threshold', default=4, type=int)
-parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
-parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
-parser.add_argument('--name', help='Targetsite Name', required=False)
-parser.add_argument('--cells', help='Cells', required=False)
-
-args = parser.parse_args()
 
 ### 1. Tabulate the start positions for the 2nd read in pair across the genome.
-def tabulate_start_positions(BamFileName):
+def tabulate_start_positions(BamFileName, args):
     sorted_bam_file = HTSeq.BAM_Reader(BamFileName)
     filename_base = os.path.basename(BamFileName)
     ga = HTSeq.GenomicArray("auto", stranded=False)
@@ -93,8 +76,11 @@ def tabulate_start_positions(BamFileName):
                 elif len(filtered_first_read_list) > 1 or len(filtered_second_read_list) > 1: # there is a boundary case where there are multiple alignments for one of the reads:
                     print("?")
 
+
             # Only count pairs where they originate from within 6 bp start positions
-            if pair_ok and (first_read_chr == second_read_chr) and (abs(first_read_position - second_read_position) <= 6):
+            if pair_ok and (first_read_chr == second_read_chr) and (
+            (first_read.iv.strand == '+' and abs(first_read_position - second_read_position - 1) <= 6)
+            or (second_read.iv.strand == '+' and abs(second_read_position - first_read_position - 1) <= 6)):
                 ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
                 ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
                 ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
@@ -104,7 +90,7 @@ def tabulate_start_positions(BamFileName):
                 ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
 
                 print(args.name, args.targetsite, args.cells, filename_base, first_read_chr, first_read_position,
-                      first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
+                          first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
 
             read_count += 1
             if not read_count % 100000:
@@ -132,8 +118,9 @@ def find_windows(ga_windows, window_size):
     return ga_windows # Return consolidated GenomicArray
 
 ### 3. Find actual sequences of potential off-target sites
-def output_alignments(ga, ga_windows, reference_genome):
+def output_alignments(ga, ga_windows, reference_genome, args):
     target_sequence = args.targetsite
+
     for iv, value in ga_windows.steps():
         if value:
             count = sum(list(ga[iv]))
@@ -200,15 +187,27 @@ def reverse_complement(sequence):
     return sequence.translate(transtab)[::-1]
 
 def main():
+    parser = argparse.ArgumentParser(description='Identify off-target candidates from Illumina short read sequencing data.')
+    parser.add_argument('--ref', help='Reference Genome Fasta', required=True)
+    parser.add_argument('--bam', help='Sorted BAM file', required=True)
+    parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
+    parser.add_argument('--reads', help='Read threshold', default=4, type=int)
+    parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
+    parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
+    parser.add_argument('--name', help='Targetsite Name', required=False)
+    parser.add_argument('--cells', help='Cells', required=False)
+
+    args = parser.parse_args()
+
     # Tabulate start positions for read 2
     # Identify positions where there are more than 1 read
     reference_genome = pyfaidx.Fasta(args.ref)
     print("Reference genome loaded.", file=sys.stderr)
-    ga, ga_windows, ga_stranded = tabulate_start_positions(args.bam)
+    ga, ga_windows, ga_stranded = tabulate_start_positions(args.bam, args)
     print("Tabulate start positions.", file=sys.stderr)
     ga_consolidated_windows = find_windows(ga_windows, args.windowsize)
     print("Get consolidated windows.", file=sys.stderr)
-    output_alignments(ga, ga_consolidated_windows, reference_genome)
+    output_alignments(ga, ga_consolidated_windows, reference_genome, args)
     print("Get alignments.", file=sys.stderr)
 
 if __name__ == "__main__":
