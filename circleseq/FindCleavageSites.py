@@ -89,6 +89,7 @@ def tabulate_start_positions(BamFileName, args):
                 ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
                 ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
 
+                # Output read positions for plotting. Add gap.
                 print(args.name, args.targetsite, args.cells, filename_base, first_read_chr, first_read_position,
                           first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
 
