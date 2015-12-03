@@ -1,0 +1,24 @@
+reference_genome: /Volumes/Media/hg38/hg38.fa
+output_folder: ../test/output
+
+bwa: bwa
+bedtools: bedtools
+
+samples:
+    control:
+        target: ACTGACTGACTGACG
+        forward: control.read1.fastq.gz
+        reverse: control.read2.fastq.gz
+        description: Control
+
+    EMX1:
+        target: ACTGACTGACTGACT
+        forward: EMX1.read1.fastq.gz
+        reverse: EMX1.read2.fastq.gz
+        description: EMX1
+
+    FANCF:
+        target: ACTGACTGACTGACT
+        forward: FANCF.read1.fastq.gz
+        reverse: FANCF.read2.fastq.gz
+        description: FANCF
