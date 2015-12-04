@@ -1,24 +1,12 @@
-reference_genome: /Volumes/Media/hg38/hg38.fa
+reference_genome: /Volumes/JOUNG/genomes/Homo_sapiens_assembly19.fasta
 output_folder: ../test/output
 
 bwa: bwa
-bedtools: bedtools
+samtools: samtools
 
 samples:
     control:
         target: ACTGACTGACTGACG
-        forward: control.read1.fastq.gz
-        reverse: control.read2.fastq.gz
+        read1: ../test/undemux.r1.fastq.gz
+        read2: ../test/undemux.r1.fastq.gz
         description: Control
-
-    EMX1:
-        target: ACTGACTGACTGACT
-        forward: EMX1.read1.fastq.gz
-        reverse: EMX1.read2.fastq.gz
-        description: EMX1
-
-    FANCF:
-        target: ACTGACTGACTGACT
-        forward: FANCF.read1.fastq.gz
-        reverse: FANCF.read2.fastq.gz
-        description: FANCF

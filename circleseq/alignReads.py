@@ -1,11 +1,21 @@
-import subprocess
-import os
-
 """
 alignReads
 """
 
-def alignReads(BWA_path, HG19_path, sample_name, read1, read2, output_folder):
+import subprocess
+import os
+import logging
+
+logger = logging.getLogger('root')
+logger.propagate = False
+
+def alignReads(BWA_path, HG19_path, read1, read2, outfile):
+
+    sample_name = os.path.basename(outfile).split('.')[0]
+    output_folder = os.path.dirname(outfile)
+    base_name = os.path.join(output_folder, sample_name)
+    sam_filename = outfile
+    bam_filename = base_name + '.bam'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -23,29 +33,42 @@ def alignReads(BWA_path, HG19_path, sample_name, read1, read2, output_folder):
 
     # If the genome is not already indexed, index it
     if not genome_indexed:
-        print 'Genome index files not detected. Running BWA to generate indices.'
+        logger.info('Genome index files not detected. Running BWA to generate indices.')
         bwa_index_command = '{0} index {1}'.format(BWA_path, HG19_path)
-        print bwa_index_command
+        logger.info('Running bwa command: %s', bwa_index_command)
         subprocess.call(bwa_index_command.split())
-        print 'BWA genome index generated'
+        logger.info('BWA genome index generated')
     else:
-        print 'BWA genome index found.'
+        logger.info('BWA genome index found.')
 
     # Run paired end alignment against the genome
-    print 'Running paired end mapping for {0} sample'.format(sample_name)
+    logger.info('Running paired end mapping for {0}'.format(sample_name))
     bwa_alignment_command = '{0} mem {1} {2} {3}'.format(BWA_path,
                                                          HG19_path,
                                                          read1,
                                                          read2)
 
-    print bwa_alignment_command
+
+    samtools_sam_to_bam_command = 'samtools sort {0} {1}'.format(sam_filename, base_name)
+    samtools_index_command = 'samtools index {0}'.format(bam_filename)
+    samtools_sort_by_name_command = 'samtools sort -n {0} {1}'.format(bam_filename, base_name + '_sorted')
+
+    logger.info(bwa_alignment_command)
 
     # Open the outfile and redirect the output of the alignment to it.
-    outfile_path = os.path.join(output_folder, sample_name + '.sam')
+    with open(sam_filename, 'w') as f:
+        subprocess.call(bwa_alignment_command.split(), stdout=f)
 
-    with open(outfile_path, 'w') as outfile:
-        subprocess.call(bwa_alignment_command.split(), stdout=outfile)
+    logger.info('Paired end mapping for {0} completed.'.format(sample_name))
 
-    print 'Paired end mapping for {0} sample completed.'.format(sample_name)
+    logger.info(samtools_sam_to_bam_command)
+    subprocess.call(samtools_index_command.split())
+    logger.info('Sorting by coordinate position for {0} complete.'.format(sample_name))
 
-    return outfile_path
+    logger.info(samtools_index_command)
+    subprocess.call(samtools_index_command.split())
+    logger.info('Indexing for {0} complete.'.format(sample_name))
+
+    logger.info(samtools_sort_by_name_command)
+    subprocess.call(samtools_sort_by_name_command.split())
+    logger.info('Sorting for {0} by name complete.'.format(sample_name))
