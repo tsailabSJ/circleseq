@@ -2,6 +2,8 @@
 alignReads
 """
 
+from __future__ import print_function
+
 import subprocess
 import os
 import logging
@@ -72,3 +74,11 @@ def alignReads(BWA_path, HG19_path, read1, read2, outfile):
     logger.info(samtools_sort_by_name_command)
     subprocess.call(samtools_sort_by_name_command.split())
     logger.info('Sorting for {0} by name complete.'.format(sample_name))
+
+    with open(base_name + '_align.sh', 'w') as output_commands:
+        print(bwa_alignment_command, file=output_commands)
+        print(samtools_sam_to_bam_command, file=output_commands)
+        print(samtools_index_command, file=output_commands)
+        print(samtools_sort_by_name_command, file=output_commands)
+
+

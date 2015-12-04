@@ -20,10 +20,6 @@ class CircleSeq:
     def __init__(self):
         pass
 
-
-    def __init__(self):
-        pass
-
     def parseManifest(self, manifest_path):
         logger.info('Loading manifest...')
 
@@ -48,6 +44,7 @@ class CircleSeq:
 
         try:
             self.aligned = {}
+            self.aligned_sorted = {}
             for sample in self.samples:
                 sample_alignment_path = os.path.join(self.output_folder, 'aligned', sample + '.sam')
                 alignReads(self.BWA_path,
@@ -56,10 +53,25 @@ class CircleSeq:
                            self.samples[sample]['read2'],
                            sample_alignment_path)
                 self.aligned[sample] = sample_alignment_path
+                self.aligned_sorted[sample] = os.path.join(self.output_folder, 'aligned', sample + '_sorted.bam')
                 logger.info('Finished aligning reads to genome.')
 
         except Exception as e:
             logger.error('Error aligning')
+            logger.error(traceback.format_exc())
+            quit()
+
+    def findCleavageSites(self):
+        logger.info('Identifying off-target cleavage sites.')
+        try:
+            self.aligned = {}
+            for sample in self.samples:
+                sorted_bam_file = os.path.join(self.output_folder, 'aligned', sample + '_sorted.bam')
+                identified_sites_file = os.path.join(self.output_folder, 'identified', sample + '_identified.txt')
+                findCleavageSites.analyze(self.reference_genome, sorted_bam_file, 4, 3, True, sample, self.samples[sample]['description'], identified_sites_file)
+
+        except Exception as e:
+            logger.error('Error identifying off-target cleavage site.')
             logger.error(traceback.format_exc())
             quit()
 
@@ -79,6 +91,15 @@ def main():
     args = parse_args()
 
     if args.command == 'all':
+        c = CircleSeq()
+        c.parseManifest(args.manifest)
+        c.alignReads()
+        c.findCleavageSites()
+    elif args.command == 'align':
+        c = CircleSeq()
+        c.parseManifest(args.manifest)
+        c.alignReads()
+    elif args.command == 'identify':
         c = CircleSeq()
         c.parseManifest(args.manifest)
         c.alignReads()

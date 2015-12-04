@@ -13,14 +13,18 @@ import sys
 
 
 ### 1. Tabulate the start positions for the 2nd read in pair across the genome.
-def tabulate_start_positions(BamFileName, args):
+def tabulate_start_positions(BamFileName, cells, name, targetsite):
+    # cells = args.cells
+    # name = args.name
+    # targetsite = args.targetsite
+
     sorted_bam_file = HTSeq.BAM_Reader(BamFileName)
     filename_base = os.path.basename(BamFileName)
     ga = HTSeq.GenomicArray("auto", stranded=False)
     ga_windows = HTSeq.GenomicArray("auto", stranded=False)
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
-    output_filename = '{0}_{1}_coordinates.txt'.format(args.cells, args.name)
+    output_filename = '{0}_{1}_coordinates.txt'.format(cells, name)
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
@@ -90,7 +94,7 @@ def tabulate_start_positions(BamFileName, args):
                 ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
 
                 # Output read positions for plotting. Add gap.
-                print(args.name, args.targetsite, args.cells, filename_base, first_read_chr, first_read_position,
+                print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
                           first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
 
             read_count += 1
@@ -119,33 +123,39 @@ def find_windows(ga_windows, window_size):
     return ga_windows # Return consolidated GenomicArray
 
 ### 3. Find actual sequences of potential off-target sites
-def output_alignments(ga, ga_windows, reference_genome, args):
-    target_sequence = args.targetsite
+def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_name, target_cells, bam_filename, nofilter, read_threshold, outfile):
+    # target_sequence = args.targetsite
+    # target_name = args.name
+    # target_cells = args.cells
+    # bam_filename = args.bam
+    # nofilter = args.nofilter
+    # read_threshold = args.reads
 
-    for iv, value in ga_windows.steps():
-        if value:
-            count = sum(list(ga[iv]))
-            if count >= args.reads:
-                window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
-                sequence, mismatches, length, strand,  target_start_relative, target_end_relative = align_sequences(target_sequence, window_sequence)
-                if strand == "+":
-                    target_start_absolute = target_start_relative + iv.start - 20
-                    target_end_absolute = target_end_relative + iv.start - 20
-                elif strand == "-":
-                    target_start_absolute = iv.end + 20 - target_end_relative
-                    target_end_absolute = iv.end + 20 - target_start_relative
-                else:
-                    target_start_absolute = iv.start
-                    target_end_absolute = iv.end
-                if sequence or args.nofilter:
-                    name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
-                    read_count = int(sum(list(ga[iv])))
-                    filename = os.path.basename(args.bam)
-                    target_name = args.name
-                    target_cells = args.cells
-                    full_name = target_name + '_' + target_cells + '_' + name + '_' + str(read_count)
-                    print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
-                          iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name, target_cells, full_name, sep="\t")
+    with open(outfile, 'rU') as o:
+        for iv, value in ga_windows.steps():
+            if value:
+                count = sum(list(ga[iv]))
+                if count >= read_threshold:
+                    window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
+                    sequence, mismatches, length, strand,  target_start_relative, target_end_relative = align_sequences(target_sequence, window_sequence)
+                    if strand == "+":
+                        target_start_absolute = target_start_relative + iv.start - 20
+                        target_end_absolute = target_end_relative + iv.start - 20
+                    elif strand == "-":
+                        target_start_absolute = iv.end + 20 - target_end_relative
+                        target_end_absolute = iv.end + 20 - target_start_relative
+                    else:
+                        target_start_absolute = iv.start
+                        target_end_absolute = iv.end
+                    if sequence or nofilter:
+                        name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
+                        read_count = int(sum(list(ga[iv])))
+                        filename = os.path.basename(bam_filename)
+
+                        full_name = target_name + '_' + target_cells + '_' + name + '_' + str(read_count)
+                        print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
+                              iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name,
+                              target_cells, full_name, sep="\t", file=o)
 
 ### Smith-Waterman alignment of sequences
 def align_sequences(ref_seq, query_seq):
@@ -187,6 +197,19 @@ def reverse_complement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
     return sequence.translate(transtab)[::-1]
 
+def analyze(ref, bam, targetsite, reads, windowsize, nofilter, name, cells, out):
+    # Tabulate start positions for read 2
+    # Identify positions where there are more than 1 read
+    reference_genome = pyfaidx.Fasta(ref)
+    print("Reference genome loaded.", file=sys.stderr)
+    ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite)
+    print("Tabulate start positions.", file=sys.stderr)
+    ga_consolidated_windows = find_windows(ga_windows, windowsize)
+    print("Get consolidated windows.", file=sys.stderr)
+    output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, nofilter, reads)
+    print("Get alignments.", file=sys.stderr)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Identify off-target candidates from Illumina short read sequencing data.')
     parser.add_argument('--ref', help='Reference Genome Fasta', required=True)
@@ -197,21 +220,11 @@ def main():
     parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
     parser.add_argument('--name', help='Targetsite Name', required=False)
     parser.add_argument('--cells', help='Cells', required=False)
+    parser.add_argument('--out', help='Output file', required=False)
 
     args = parser.parse_args()
 
-    # Tabulate start positions for read 2
-    # Identify positions where there are more than 1 read
-    reference_genome = pyfaidx.Fasta(args.ref)
-    print("Reference genome loaded.", file=sys.stderr)
-    ga, ga_windows, ga_stranded = tabulate_start_positions(args.bam, args)
-    print("Tabulate start positions.", file=sys.stderr)
-    ga_consolidated_windows = find_windows(ga_windows, args.windowsize)
-    print("Get consolidated windows.", file=sys.stderr)
-    output_alignments(ga, ga_consolidated_windows, reference_genome, args)
-    print("Get alignments.", file=sys.stderr)
+    analyze(args.ref, args.bam, args.targetsite, args.reads, args.windowsize, args.nofilter, args.name, args.cells, args.out)
 
 if __name__ == "__main__":
     main()
-
-
