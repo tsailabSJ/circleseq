@@ -32,7 +32,7 @@ class CircleSeq:
 
             self.BWA_path  = manifest_data['bwa']
             self.reference_genome = manifest_data['reference_genome']
-            self.output_folder = manifest_data['output_folder']
+            self.analysis_folder = manifest_data['analysis_folder']
             self.samples = manifest_data['samples']
 
         except Exception as e:
@@ -46,14 +46,14 @@ class CircleSeq:
             self.aligned = {}
             self.aligned_sorted = {}
             for sample in self.samples:
-                sample_alignment_path = os.path.join(self.output_folder, 'aligned', sample + '.sam')
+                sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', sample + '.sam')
                 alignReads(self.BWA_path,
                            self.reference_genome,
                            self.samples[sample]['read1'],
                            self.samples[sample]['read2'],
                            sample_alignment_path)
                 self.aligned[sample] = sample_alignment_path
-                self.aligned_sorted[sample] = os.path.join(self.output_folder, 'aligned', sample + '_sorted.bam')
+                self.aligned_sorted[sample] = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
                 logger.info('Finished aligning reads to genome.')
 
         except Exception as e:
@@ -66,8 +66,8 @@ class CircleSeq:
         try:
             self.aligned = {}
             for sample in self.samples:
-                sorted_bam_file = os.path.join(self.output_folder, 'aligned', sample + '_sorted.bam')
-                identified_sites_file = os.path.join(self.output_folder, 'identified', sample + '_identified.txt')
+                sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
+                identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample + '_identified.txt')
                 findCleavageSites.analyze(self.reference_genome, sorted_bam_file, self.samples[sample]['target'], 4, 3, True, sample, self.samples[sample]['description'], identified_sites_file)
         except Exception as e:
             logger.error('Error identifying off-target cleavage site.')
@@ -83,6 +83,12 @@ def parse_args():
 
     all_parser = subparsers.add_parser('all', help='Run all steps of the pipeline')
     all_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+
+    align_parser = subparsers.add_parser('align', help='Run alignment only')
+    align_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+
+    identify_parser = subparsers.add_parser('identify', help='Run identification only')
+    identify_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
 
     return parser.parse_args()
 
@@ -101,7 +107,7 @@ def main():
     elif args.command == 'identify':
         c = CircleSeq()
         c.parseManifest(args.manifest)
-        c.alignReads()
+        c.findCleavageSites()
 
 if __name__ == '__main__':
     main()

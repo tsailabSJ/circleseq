@@ -1,12 +1,12 @@
-reference_genome: /Volumes/JOUNG/genomes/Homo_sapiens_assembly19.fasta
-output_folder: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/output
+reference_genome: /Users/shengdar/genomes/Homo_sapiens_assembly19.fasta
+analysis_folder: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/output
 
 bwa: bwa
 samtools: samtools
 
 samples:
     control:
-        target: ACTGACTGACTGACG
-        read1: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r1.fastq.gz
-        read2: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r2.fastq.gz
-        description: Control
+        target: GGGTGGGGGGAGTTTGCTCCNGG
+        read1: /Users/shengdar/Test/1_S1_L001_R1_001.fastq.gz
+        read2: /Users/shengdar/Test/1_S1_L001_R2_001.fastq.gz
+        description: control

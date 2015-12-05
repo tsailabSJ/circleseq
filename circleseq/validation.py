@@ -90,7 +90,7 @@ def checkIfValidSamples(samples):
 
 def validateManifest(manifest_data):
     # Check if manifest contains the required fields
-    fields = ['bwa', 'reference_genome', 'output_folder', 'samples']
+    fields = ['bwa', 'reference_genome', 'analysis_folder', 'samples']
     missing_fields = False
 
     for field in fields:

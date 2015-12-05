@@ -13,10 +13,9 @@ import sys
 
 
 ### 1. Tabulate the start positions for the 2nd read in pair across the genome.
-def tabulate_start_positions(BamFileName, cells, name, targetsite):
-    # cells = args.cells
-    # name = args.name
-    # targetsite = args.targetsite
+def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder):
+
+    output_filename = os.path.join(output_folder, '{0}_{1}_coordinates.txt'.format(cells, name))
 
     sorted_bam_file = HTSeq.BAM_Reader(BamFileName)
     filename_base = os.path.basename(BamFileName)
@@ -24,7 +23,7 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite):
     ga_windows = HTSeq.GenomicArray("auto", stranded=False)
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
-    output_filename = '{0}_{1}_coordinates.txt'.format(cells, name)
+
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
@@ -131,7 +130,7 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
     # nofilter = args.nofilter
     # read_threshold = args.reads
 
-    with open(outfile, 'rU') as o:
+    with open(outfile, 'w') as o:
         for iv, value in ga_windows.steps():
             if value:
                 count = sum(list(ga[iv]))
@@ -198,15 +197,17 @@ def reverse_complement(sequence):
     return sequence.translate(transtab)[::-1]
 
 def analyze(ref, bam, targetsite, reads, windowsize, nofilter, name, cells, out):
-    # Tabulate start positions for read 2
-    # Identify positions where there are more than 1 read
+    output_folder = os.path.dirname(out)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
     reference_genome = pyfaidx.Fasta(ref)
     print("Reference genome loaded.", file=sys.stderr)
-    ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite)
+    ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, output_folder)
     print("Tabulate start positions.", file=sys.stderr)
     ga_consolidated_windows = find_windows(ga_windows, windowsize)
     print("Get consolidated windows.", file=sys.stderr)
-    output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, nofilter, reads)
+    output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, nofilter, reads, out)
     print("Get alignments.", file=sys.stderr)
 
 
