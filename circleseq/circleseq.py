@@ -64,7 +64,7 @@ class CircleSeq:
     def findCleavageSites(self):
         logger.info('Identifying off-target cleavage sites.')
         try:
-            self.aligned = {}
+
             for sample in self.samples:
                 sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
                 identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample + '_identified.txt')
@@ -73,6 +73,11 @@ class CircleSeq:
             logger.error('Error identifying off-target cleavage site.')
             logger.error(traceback.format_exc())
             quit()
+
+    def visualize(self):
+        pass
+
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -89,6 +94,9 @@ def parse_args():
 
     identify_parser = subparsers.add_parser('identify', help='Run identification only')
     identify_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+
+    visualize_parser = subparsers.add_parser('identify', help='Run visualization only')
+    visualize_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
 
     return parser.parse_args()
 
@@ -108,6 +116,10 @@ def main():
         c = CircleSeq()
         c.parseManifest(args.manifest)
         c.findCleavageSites()
+    elif args.command == 'visualize':
+        c = CircleSeq()
+        c.parseManifest(args.manifest)
+        c.visualize()
 
 if __name__ == '__main__':
     main()
