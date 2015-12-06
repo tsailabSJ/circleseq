@@ -149,11 +149,11 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                     if sequence:
                         print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
                               iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name,
-                              target_cells, full_name, sep="\t", file=o1)
+                              target_cells, full_name, target_sequence,  sep="\t", file=o1)
                     else:
                         print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
                               iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name,
-                              target_cells, full_name, sep="\t", file=o2)
+                              target_cells, full_name,  target_sequence sep="\t", file=o2)
 
 ### Smith-Waterman alignment of sequences
 def align_sequences(ref_seq, query_seq):
