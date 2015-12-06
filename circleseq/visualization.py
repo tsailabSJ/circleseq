@@ -15,8 +15,8 @@ def parseSitesFile(infile):
         for line in f:
             line_items = line.split('\t')
             offtarget_sequence = line_items[11]
-            offtarget_reads = line_items[11]
-            ref_seq = line_items[4]
+            offtarget_reads = line_items[4]
+            ref_seq = line_items[21]
             if offtarget_sequence != '':
                 offtargets.append({'seq': offtarget_sequence.strip(),
                                    'reads': int(offtarget_reads.strip())})
