@@ -122,15 +122,11 @@ def find_windows(ga_windows, window_size):
     return ga_windows # Return consolidated GenomicArray
 
 ### 3. Find actual sequences of potential off-target sites
-def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_name, target_cells, bam_filename, nofilter, read_threshold, outfile):
-    # target_sequence = args.targetsite
-    # target_name = args.name
-    # target_cells = args.cells
-    # bam_filename = args.bam
-    # nofilter = args.nofilter
-    # read_threshold = args.reads
+def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_name, target_cells, bam_filename, read_threshold, outfile_base):
+    outfile_sequence_match = outfile_base + '_identified_sequence.txt'
+    outfile_no_sequence_match = outfile_base + '_identified_no_sequence.txt'
 
-    with open(outfile, 'w') as o:
+    with open(outfile_sequence_match, 'w') as o1, open(outfile_no_sequence_match, 'w') as o2:
         for iv, value in ga_windows.steps():
             if value:
                 count = sum(list(ga[iv]))
@@ -146,15 +142,18 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                     else:
                         target_start_absolute = iv.start
                         target_end_absolute = iv.end
-                    if sequence or nofilter:
-                        name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
-                        read_count = int(sum(list(ga[iv])))
-                        filename = os.path.basename(bam_filename)
-
-                        full_name = target_name + '_' + target_cells + '_' + name + '_' + str(read_count)
+                    name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
+                    read_count = int(sum(list(ga[iv])))
+                    filename = os.path.basename(bam_filename)
+                    full_name = target_name + '_' + target_cells + '_' + name + '_' + str(read_count)
+                    if sequence:
                         print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
                               iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name,
-                              target_cells, full_name, sep="\t", file=o)
+                              target_cells, full_name, sep="\t", file=o1)
+                    else:
+                        print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
+                              iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name,
+                              target_cells, full_name, sep="\t", file=o2)
 
 ### Smith-Waterman alignment of sequences
 def align_sequences(ref_seq, query_seq):
@@ -196,13 +195,13 @@ def reverse_complement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
     return sequence.translate(transtab)[::-1]
 
-def analyze(ref, bam, targetsite, reads, windowsize, nofilter, name, cells, out):
+def analyze(ref, bam, targetsite, reads, windowsize, name, cells, out):
     output_folder = os.path.dirname(out)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     output_command_filename = os.path.join(output_folder,name + '_identify.sh')
-    analyze_command = '{0}'
+    analyze_command = 'python {0}'
 
     with open(output_command_filename, 'w') as output_command_file:
         print(analyze_command, file=output_command_file)
@@ -213,7 +212,7 @@ def analyze(ref, bam, targetsite, reads, windowsize, nofilter, name, cells, out)
     print("Tabulate start positions.", file=sys.stderr)
     ga_consolidated_windows = find_windows(ga_windows, windowsize)
     print("Get consolidated windows.", file=sys.stderr)
-    output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, nofilter, reads, out)
+    output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, reads, out)
     print("Get alignments.", file=sys.stderr)
 
 
@@ -224,14 +223,14 @@ def main():
     parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
     parser.add_argument('--reads', help='Read threshold', default=4, type=int)
     parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
-    parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
+    # parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
     parser.add_argument('--name', help='Targetsite Name', required=False)
     parser.add_argument('--cells', help='Cells', required=False)
-    parser.add_argument('--out', help='Output file', required=False)
+    parser.add_argument('--out', help='Output file base', required=False)
 
     args = parser.parse_args()
 
-    analyze(args.ref, args.bam, args.targetsite, args.reads, args.windowsize, args.nofilter, args.name, args.cells, args.out)
+    analyze(args.ref, args.bam, args.targetsite, args.reads, args.windowsize, args.name, args.cells, args.out)
 
 if __name__ == "__main__":
     main()
