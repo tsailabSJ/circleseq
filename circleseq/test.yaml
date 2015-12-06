@@ -7,6 +7,6 @@ samtools: samtools
 samples:
     control:
         target: GGGTGGGGGGAGTTTGCTCCNGG
-        read1: /Users/shengdar/Test/1_S1_L001_R1_001.fastq.gz
-        read2: /Users/shengdar/Test/1_S1_L001_R2_001.fastq.gz
+        read1: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r1.fastq.gz
+        read2: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r2.fastq.gz
         description: control

@@ -67,7 +67,7 @@ def alignReads(BWA_path, HG19_path, read1, read2, outfile):
 
     # Convert SAM to BAM file
     logger.info(samtools_sam_to_bam_command)
-    subprocess.call(samtools_sam_to_bam_command)
+    subprocess.call(samtools_sam_to_bam_command.split())
     logger.info('Sorting by coordinate position for {0} complete.'.format(sample_name))
 
     # Index SAM file
