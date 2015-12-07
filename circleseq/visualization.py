@@ -2,7 +2,6 @@ import svgwrite
 import sys
 import os
 
-boxWidth = 10
 box_size = 15
 v_spacing = 3
 
@@ -35,7 +34,7 @@ def visualizeOfftargets(infile, outfile, title=None):
     offtargets, ref_seq = parseSitesFile(infile)
 
     # Initiate canvas
-    dwg = svgwrite.Drawing(outfile + '.svg', profile='full')
+    dwg = svgwrite.Drawing(outfile + '.svg', profile='full', size=(u'100%', len(offtargets)*(box_size + 1)))
 
     if title is not None:
         # Define top and left margins
