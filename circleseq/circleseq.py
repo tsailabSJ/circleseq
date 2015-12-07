@@ -86,7 +86,7 @@ class CircleSeq:
         try:
             for sample in self.samples:
                 if sample != 'control':
-                    infile = os.path.join(self.analysis_folder, 'identified', sample + '_matched.txt')
+                    infile = os.path.join(self.analysis_folder, 'identified', sample + 'identified_matched.txt')
                     outfile = os.path.join(self.analysis_folder, 'visualization', sample + '_offtargets')
                     visualizeOfftargets(infile, outfile, title=sample)
 
