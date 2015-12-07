@@ -13,10 +13,11 @@ def parseSitesFile(infile):
     with open(infile, 'r') as f:
         f.readline()
         for line in f:
+            line = line.rstrip('\n')
             line_items = line.split('\t')
             offtarget_sequence = line_items[11]
             offtarget_reads = line_items[4]
-            ref_seq = line_items[21]
+            ref_seq = line_items[18]
             if offtarget_sequence != '':
                 offtargets.append({'seq': offtarget_sequence.strip(),
                                    'reads': int(offtarget_reads.strip())})

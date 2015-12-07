@@ -3,7 +3,7 @@ circleseq.py as the wrapper for CIRCLE-seq analysis
 """
 
 from alignReads import alignReads
-
+from visualization import visualizeOfftargets
 import argparse
 import os
 import sys
@@ -63,6 +63,7 @@ class CircleSeq:
 
     def findCleavageSites(self):
         logger.info('Identifying off-target cleavage sites.')
+
         try:
 
             for sample in self.samples:
@@ -75,8 +76,20 @@ class CircleSeq:
             quit()
 
     def visualize(self):
-        pass
+        logger.info('Visualizing off-target sites')
 
+        try:
+            for sample in self.samples:
+                if sample != 'control':
+                    infile = os.path.join(self.output_folder, 'identified', sample + '_identified_sequence.txt')
+                    outfile = os.path.join(self.output_folder, 'visualization', sample + '_offtargets')
+                    visualizeOfftargets(infile, outfile, title=sample)
+
+            logger.info('Finished visualizing off-target sites')
+
+        except Exception as e:
+            logger.error('Error visualizing off-target sites.')
+            logger.error(traceback.format_exc())
 
 
 def parse_args():
