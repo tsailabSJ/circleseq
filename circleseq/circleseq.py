@@ -103,9 +103,8 @@ class CircleSeq:
         try:
             for sample in self.samples:
                 cmd = 'python {0} all --manifest {1} --sample {2}'.format(current_script, manifest_path, sample)
-                lsf_cmd = cmd_template.format(cmd)
-                logger.info(lsf_cmd)
-                subprocess.call(lsf_cmd.split())
+                logger.info(cmd)
+                subprocess.call(cmd_template.split() + [cmd])
             logger.info('Finished job submission')
 
         except Exception as e:
@@ -126,7 +125,7 @@ def parse_args():
 
     parallel_parser = subparsers.add_parser('parallel', help='Run all steps of the pipeline in parallel')
     parallel_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
-    parallel_parser.add_argument('--cmd', '-c', help='Specify LSF CMD', default="bsub -q medium '{0}'")
+    parallel_parser.add_argument('--cmd', '-c', help='Specify LSF CMD', default="bsub -q medium")
 
     align_parser = subparsers.add_parser('align', help='Run alignment only')
     align_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
