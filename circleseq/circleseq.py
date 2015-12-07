@@ -96,13 +96,13 @@ class CircleSeq:
             logger.error('Error visualizing off-target sites.')
             logger.error(traceback.format_exc())
 
-    def parallel(self, manifest_path, cmd_template):
+    def parallel(self, manifest_path, cmd_template, cmd='all'):
         logger.info('Submitting parallel jobs')
         current_script = __file__
 
         try:
             for sample in self.samples:
-                cmd = 'python {0} all --manifest {1} --sample {2}'.format(current_script, manifest_path, sample)
+                cmd = 'python {0} {1} --manifest {2} --sample {3}'.format(current_script, cmd, manifest_path, sample)
                 logger.info(cmd)
                 subprocess.call(cmd_template.split() + [cmd])
             logger.info('Finished job submission')
@@ -129,12 +129,15 @@ def parse_args():
 
     align_parser = subparsers.add_parser('align', help='Run alignment only')
     align_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+    align_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
 
     identify_parser = subparsers.add_parser('identify', help='Run identification only')
     identify_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+    identify_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
 
     visualize_parser = subparsers.add_parser('visualize', help='Run visualization only')
     visualize_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+    visualize_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
 
     return parser.parse_args()
 
