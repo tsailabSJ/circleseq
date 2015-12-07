@@ -86,7 +86,7 @@ class CircleSeq:
         try:
             for sample in self.samples:
                 if sample != 'control':
-                    infile = os.path.join(self.analysis_folder, 'identified', sample + 'identified_matched.txt')
+                    infile = os.path.join(self.analysis_folder, 'identified', sample + '_identified_matched.txt')
                     outfile = os.path.join(self.analysis_folder, 'visualization', sample + '_offtargets')
                     visualizeOfftargets(infile, outfile, title=sample)
 
@@ -149,6 +149,7 @@ def main():
         c.parseManifest(args.manifest, args.sample)
         c.alignReads()
         c.findCleavageSites()
+        c.visualize()
     elif args.command == 'parallel':
         c = CircleSeq()
         c.parseManifest(args.manifest)
