@@ -108,7 +108,7 @@ def parse_args():
     identify_parser = subparsers.add_parser('identify', help='Run identification only')
     identify_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
 
-    visualize_parser = subparsers.add_parser('identify', help='Run visualization only')
+    visualize_parser = subparsers.add_parser('visualize', help='Run visualization only')
     visualize_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
 
     return parser.parse_args()
