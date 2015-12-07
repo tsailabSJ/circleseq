@@ -96,15 +96,15 @@ class CircleSeq:
             logger.error('Error visualizing off-target sites.')
             logger.error(traceback.format_exc())
 
-    def parallel(self, manifest_path, cmd_template, cmd='all'):
+    def parallel(self, manifest_path, lsf, run='all'):
         logger.info('Submitting parallel jobs')
         current_script = __file__
 
         try:
             for sample in self.samples:
-                cmd = 'python {0} {1} --manifest {2} --sample {3}'.format(current_script, cmd, manifest_path, sample)
+                cmd = 'python {0} {1} --manifest {2} --sample {3}'.format(current_script, run, manifest_path, sample)
                 logger.info(cmd)
-                subprocess.call(cmd_template.split() + [cmd])
+                subprocess.call(lsf.split() + [cmd])
             logger.info('Finished job submission')
 
         except Exception as e:
@@ -125,7 +125,8 @@ def parse_args():
 
     parallel_parser = subparsers.add_parser('parallel', help='Run all steps of the pipeline in parallel')
     parallel_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
-    parallel_parser.add_argument('--cmd', '-c', help='Specify LSF CMD', default="bsub -q medium")
+    parallel_parser.add_argument('--lsf', '-c', help='Specify LSF CMD', default='bsub -q medium')
+    parallel_parser.add_argument('--run', '-c', help='Specify which steps of pipepline to run (all, align, identify, visualize)', default='all')
 
     align_parser = subparsers.add_parser('align', help='Run alignment only')
     align_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
@@ -153,7 +154,7 @@ def main():
     elif args.command == 'parallel':
         c = CircleSeq()
         c.parseManifest(args.manifest)
-        c.parallel(args.manifest, args.cmd)
+        c.parallel(args.manifest, args.run)
     elif args.command == 'align':
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
