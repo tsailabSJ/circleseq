@@ -3,28 +3,35 @@
 
 This is a repository for CIRCLE-seq analytical software, which takes sample-specific paired end FASTQ files as input and produces a list of CIRCLE-seq detected off-target cleavage sites as output.
 
+Dependencies
+=======
+
+* Python (2.6, 2.7, or PyPy)
+* `bwa <http://bio-bwa.sourceforge.net/>`_ alignment tool
+* `samtools <http://www.htslib.org/>`_  alignment format manipulation
+
 **Usage**
 =========
 
-The files used in the example are located in `/data/joung/CIRCLE-Seq/optimized_test3_K562s_151013`
+Using this tool is simple, just create a ``.yaml`` manifest file referencing the dependencies and sample ``.fastq.gz`` file paths. Then, run ``python /path/to/circleseq.py all --manifest /path/to/manifest.yaml``
 
-1. The first step is to map the reads to the human reference genome using bwa.
+Below is an example ``manifest.yaml`` file::
 
-```
-bwa mem /data/joung/genomes/Homo_sapiens_assembly19.fasta 1025_S1_L001_R1_001.fastq.gz 1025_S1_L001_R2_001.fastq.gz > 1025_S1_L001.sam
-samtools view -bS 1025_S1_L001.sam | samtools sort - 1025_S1_L001
-samtools index 1025_S1_L001.bam
-```
-2. The second step is to sort the reads by read name to group paired end reads.
+    reference_genome: /data/joung/genomes/Homo_sapiens_assembly19.fasta
+    analysis_folder: /data/joung/CIRCLE-Seq/test2
+    
+    bwa: bwa
+    samtools: samtools
+    
+    samples:
+      VEGFA_site1:
+          target: GGGTGGGGGGAGTTTGCTCCNGG
+          read1: /data/joung/sequencing_fastq/150902_M01326_0235_000000000-AHLT8/fastq/1_S1_L001_R1_001.fastq.gz
+          read2: /data/joung/sequencing_fastq/150902_M01326_0235_000000000-AHLT8/fastq/1_S1_L001_R2_001.fastq.gz
+          description: VEGFA_site1
+      EMX1:
+          target: GAGTCCGAGCAGAAGAAGAANGG
+          read1: /data/joung/sequencing_fastq/150902_M01326_0235_000000000-AHLT8/fastq/2_S2_L001_R1_001.fastq.gz
+          read2: /data/joung/sequencing_fastq/150902_M01326_0235_000000000-AHLT8/fastq/2_S2_L001_R2_001.fastq.gz
+          description: EMX1
 
-
-```
-samtools sort -n 1025_S1_L001.bam 1025_S1_L001_sorted
-```
-
-3. The final step is to run FindCleavageSites-Circular.py on the sorted BAM files to identify CIRCLE-seq Cas9 off-target cleavage sites.
-
-
-```
-python /data/joung/bitbucket/circle-seq/FindCleavageSites-Circular.py --ref /data/joung/genomes/Homo_sapiens_assembly19.fasta --reads 4 --windowsize 3 --bam 1025_S1_L001_sorted.bam --targetsite GGGAAAGACCCAGCATCCGTNGG > CIRCLE-Seq_Adli_site1.txt
-```
