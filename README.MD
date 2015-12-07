@@ -7,9 +7,11 @@ Dependencies
 =======
 
 * Python (2.6, 2.7, or PyPy)
-* `bwa <http://bio-bwa.sourceforge.net/>`_ alignment tool
-* `samtools <http://www.htslib.org/>`_  alignment format manipulation
+* [bwa] alignment tool
+* [samtools] alignment format manipulation
 
+[bwa]: http://bio-bwa.sourceforge.net
+[samtools]: http://www.htslib.org
 **Usage**
 =========
 
