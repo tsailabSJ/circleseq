@@ -39,7 +39,11 @@ class CircleSeq:
             else:
                 self.samples = {}
                 self.samples[sample] = manifest_data['samples'][sample]
-
+            # Make folders for output
+            for folder in [ 'aligned', 'identified', 'visualization' ]:
+                output_folder = os.path.join(self.analysis_folder, folder)
+                if not os.path.exists(output_folder):
+                    os.makedirs(output_folder)
 
         except Exception as e:
             logger.error('Incorrect or malformed manifest file. Please ensure your manifest contains all required fields.')
