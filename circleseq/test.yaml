@@ -10,3 +10,8 @@ samples:
         read1: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r1.fastq.gz
         read2: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r2.fastq.gz
         description: control
+    EMX1:
+        target: GGGTGGGGGGAGTTTGCTCCNGG
+        read1: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r1.fastq.gz
+        read2: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r2.fastq.gz
+        description: EMX1

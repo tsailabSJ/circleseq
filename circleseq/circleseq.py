@@ -7,6 +7,7 @@ from visualization import visualizeOfftargets
 import argparse
 import os
 import sys
+import subprocess
 import traceback
 import log
 import yaml
@@ -20,7 +21,7 @@ class CircleSeq:
     def __init__(self):
         pass
 
-    def parseManifest(self, manifest_path):
+    def parseManifest(self, manifest_path, sample='all'):
         logger.info('Loading manifest...')
 
         with open(manifest_path, 'r') as f:
@@ -33,7 +34,12 @@ class CircleSeq:
             self.BWA_path  = manifest_data['bwa']
             self.reference_genome = manifest_data['reference_genome']
             self.analysis_folder = manifest_data['analysis_folder']
-            self.samples = manifest_data['samples']
+            if sample == 'all':
+                self.samples = manifest_data['samples']
+            else:
+                self.samples = {}
+                self.samples[sample] = manifest_data['samples'][sample]
+
 
         except Exception as e:
             logger.error('Incorrect or malformed manifest file. Please ensure your manifest contains all required fields.')
@@ -65,7 +71,6 @@ class CircleSeq:
         logger.info('Identifying off-target cleavage sites.')
 
         try:
-
             for sample in self.samples:
                 sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
                 identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample)
@@ -91,6 +96,22 @@ class CircleSeq:
             logger.error('Error visualizing off-target sites.')
             logger.error(traceback.format_exc())
 
+    def parallel(self, manifest_path, cmd_template):
+        logger.info('Submitting parallel jobs')
+        current_script = __file__
+
+        try:
+            for sample in self.samples:
+                cmd = 'python {0} all --manifest {1} --sample {2}'.format(current_script, manifest_path, sample)
+                lsf_cmd = cmd_template.format(cmd)
+                logger.info(lsf_cmd)
+                subprocess.call(lsf_cmd.split())
+            logger.info('Finished job submission')
+
+        except Exception as e:
+            logger.error('Error submitting jobs.')
+            logger.error(traceback.format_exc())
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -101,6 +122,11 @@ def parse_args():
 
     all_parser = subparsers.add_parser('all', help='Run all steps of the pipeline')
     all_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+    all_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
+
+    parallel_parser = subparsers.add_parser('parallel', help='Run all steps of the pipeline in parallel')
+    parallel_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+    parallel_parser.add_argument('--cmd', '-c', help='Specify LSF CMD', default="bsub -q medium '{0}'")
 
     align_parser = subparsers.add_parser('align', help='Run alignment only')
     align_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
@@ -118,20 +144,25 @@ def main():
 
     if args.command == 'all':
         c = CircleSeq()
-        c.parseManifest(args.manifest)
+        c.parseManifest(args.manifest, args.sample)
         c.alignReads()
         c.findCleavageSites()
-    elif args.command == 'align':
+    elif args.command == 'parallel':
         c = CircleSeq()
         c.parseManifest(args.manifest)
+        c.parallel(args.manifest, args.cmd)
+        pass
+    elif args.command == 'align':
+        c = CircleSeq()
+        c.parseManifest(args.manifest, args.sample)
         c.alignReads()
     elif args.command == 'identify':
         c = CircleSeq()
-        c.parseManifest(args.manifest)
+        c.parseManifest(args.manifest, args.sample)
         c.findCleavageSites()
     elif args.command == 'visualize':
         c = CircleSeq()
-        c.parseManifest(args.manifest)
+        c.parseManifest(args.manifest, args.sample)
         c.visualize()
 
 if __name__ == '__main__':

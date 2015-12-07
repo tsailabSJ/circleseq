@@ -123,10 +123,10 @@ def find_windows(ga_windows, window_size):
 
 ### 3. Find actual sequences of potential off-target sites
 def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_name, target_cells, bam_filename, read_threshold, outfile_base):
-    outfile_sequence_match = outfile_base + '_identified_sequence.txt'
-    outfile_no_sequence_match = outfile_base + '_identified_no_sequence.txt'
+    outfile_matched = outfile_base + '_identified_matched.txt'
+    outfile_unmatched = outfile_base + '_identified_unmatched.txt'
 
-    with open(outfile_sequence_match, 'w') as o1, open(outfile_no_sequence_match, 'w') as o2:
+    with open(outfile_matched, 'w') as o1, open(outfile_unmatched, 'w') as o2:
         for iv, value in ga_windows.steps():
             if value:
                 count = sum(list(ga[iv]))
