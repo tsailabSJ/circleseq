@@ -125,8 +125,8 @@ def parse_args():
 
     parallel_parser = subparsers.add_parser('parallel', help='Run all steps of the pipeline in parallel')
     parallel_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
-    parallel_parser.add_argument('--lsf', '-c', help='Specify LSF CMD', default='bsub -q medium')
-    parallel_parser.add_argument('--run', '-c', help='Specify which steps of pipepline to run (all, align, identify, visualize)', default='all')
+    parallel_parser.add_argument('--lsf', '-l', help='Specify LSF CMD', default='bsub -q medium')
+    parallel_parser.add_argument('--run', '-r', help='Specify which steps of pipepline to run (all, align, identify, visualize)', default='all')
 
     align_parser = subparsers.add_parser('align', help='Run alignment only')
     align_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
