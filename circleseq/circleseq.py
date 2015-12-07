@@ -154,7 +154,6 @@ def main():
         c = CircleSeq()
         c.parseManifest(args.manifest)
         c.parallel(args.manifest, args.cmd)
-        pass
     elif args.command == 'align':
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
