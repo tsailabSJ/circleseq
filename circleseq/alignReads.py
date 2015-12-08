@@ -53,11 +53,11 @@ def alignReads(BWA_path, HG19_path, read1, read2, outfile):
     samtools_index_command = 'samtools index {0}'.format(bam_filename)
     samtools_sort_by_name_command = 'samtools sort -n {0} {1}'.format(bam_filename, base_name + '_sorted')
 
-    with open(base_name + '_align.sh', 'w') as output_commands:
-        print(bwa_alignment_command, file=output_commands)
-        print(samtools_sam_to_bam_command, file=output_commands)
-        print(samtools_index_command, file=output_commands)
-        print(samtools_sort_by_name_command, file=output_commands)
+    # with open(base_name + '_align.sh', 'w') as output_commands:
+    #     print(bwa_alignment_command, file=output_commands)
+    #     print(samtools_sam_to_bam_command, file=output_commands)
+    #     print(samtools_index_command, file=output_commands)
+    #     print(samtools_sort_by_name_command, file=output_commands)
 
     # Open the outfile and redirect the output of the alignment to it.
     logger.info(bwa_alignment_command)

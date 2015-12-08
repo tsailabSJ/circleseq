@@ -82,8 +82,8 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder
 
             # Only count pairs where they originate from within 6 bp start positions
             if pair_ok and (first_read_chr == second_read_chr) and (
-            (first_read.iv.strand == '+' and abs(first_read_position - second_read_position - 1) <= 6)
-            or (second_read.iv.strand == '+' and abs(second_read_position - first_read_position - 1) <= 6)):
+            (first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 6)
+            or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 6)):
                 ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
                 ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
                 ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
