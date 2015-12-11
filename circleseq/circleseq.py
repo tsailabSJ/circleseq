@@ -149,7 +149,7 @@ def parse_args():
 
     reference_free_parser = subparsers.add_parser('reference-free', help='Run reference-free discovery only')
     reference_free_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
-    reference_free__parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
+    reference_free_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
 
     return parser.parse_args()
 
