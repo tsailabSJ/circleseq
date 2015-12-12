@@ -200,12 +200,6 @@ def analyze(ref, bam, targetsite, reads, windowsize, name, cells, out):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    output_command_filename = os.path.join(output_folder,name + '_identify.sh')
-    analyze_command = 'python {0}'
-
-    with open(output_command_filename, 'w') as output_command_file:
-        print(analyze_command, file=output_command_file)
-
     reference_genome = pyfaidx.Fasta(ref)
     print("Reference genome loaded.", file=sys.stderr)
     ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, output_folder)
