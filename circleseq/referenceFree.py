@@ -77,20 +77,20 @@ def analyze(fastq1_filename, fastq2_filename, targetsite, out, name='', cells=''
         r1_sequence = r1[1].rstrip('\n')
         r2_sequence = r2[1].rstrip('\n')
         joined_seq = reverse_complement(r1_sequence) + r2_sequence
-        offtarget, mismatch, length, strand, start, end = align_sequences(targetsite, joined_seq)
-        if offtarget and start > 130 and end < 170:
-            if strand == '-':
-                joined_seq = reverse_complement(joined_seq)
-            left_seq = joined_seq[start-10:start]
-            check = joined_seq[start:end]
-            right_seq = joined_seq[end-10:end]
+        truncated_joined_seq = joined_seq[130:170]
+        offtarget, mismatch, length, strand, start, end = align_sequences(targetsite, truncated_joined_seq)
+        if offtarget:
+            # if strand == '-':
+            #     truncated_joined_seq = reverse_complement(truncated_joined_seq)
+            # # left_seq = truncated_joined_seq[start - 10:start]
+            # # check = truncated_joined_seq[start:end]
+            # # right_seq = truncated_joined_seq[end - 10:end]
             c[offtarget] += 1
             print(offtarget, mismatch, length, strand, start, end, c[offtarget])
 
 def join_write_output(fastq1_filename, fastq2_filename, out):
     fastq1_file = fq(fastq1_filename)
     fastq2_file = fq(fastq2_filename)
-
 
     with open(out, 'w') as o:
         for r1, r2 in itertools.izip(fastq1_file, fastq2_file):
