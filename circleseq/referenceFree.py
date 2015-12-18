@@ -3,9 +3,11 @@ from __future__ import print_function
 import argparse
 import itertools
 import re
+import regex
 import gzip
 import string
 import swalign
+import sys
 import collections
 
 """
@@ -30,13 +32,12 @@ def fq(file):
 ### Simple reverse_complement method
 """
 
-def reverse_complement(sequence):
+def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
     return sequence.translate(transtab)[::-1]
 
 """
-### Simple reverse_complement method
-"""
+### Smith-waterman alignment method
 
 ### Smith-Waterman alignment of sequences
 def align_sequences(ref_seq, query_seq):
@@ -64,29 +65,108 @@ def align_sequences(ref_seq, query_seq):
         return [reverse_alignment.query[start:end], ref_length - reverse_alignment.matches - 1, end - start, strand, start, end]
     else:
         return ["", "", "", "", "", ""]
+"""
+
+def regexFromSequence(seq, lookahead=True, mismatches=2):
+    """
+    Given a sequence with ambiguous base characters, returns a regex that matches for
+    the explicit (unambiguous) base characters
+    """
+    IUPAC_notation_regex = {'N': '[ATCGN]',
+                            'Y': '[CTY]',
+                            'R': '[AGR]',
+                            'W': '[ATW]',
+                            'S': '[CGS]',
+                            'A': 'A',
+                            'T': 'T',
+                            'C': 'C',
+                            'G': 'G'}
+
+    pattern = ''
+
+    for c in seq:
+        pattern += IUPAC_notation_regex[c]
+
+    if lookahead:
+        pattern = '(?:' + pattern + ')'
+    if mismatches > 0:
+        pattern = pattern + '{{s<={}}}'.format(mismatches)
+
+    return pattern
+
+
+
+def alignSequences(targetsite_sequence, window_sequence, max_mismatches = 7):
+    """
+    Given a targetsite and window, use a fuzzy regex to align the targetsite to
+    the window. Returns the best match.
+    """
+
+    # Try both strands
+    query_regex = regexFromSequence(targetsite_sequence, mismatches=max_mismatches)
+    forward_alignment = regex.search(query_regex, window_sequence, regex.BESTMATCH)
+
+    # reverse_regex = regexFromSequence(reverseComplement(targetsite_sequence), mismatches=max_mismatches)
+    reverse_alignment = regex.search(query_regex, reverseComplement(window_sequence), regex.BESTMATCH)
+
+    if forward_alignment is None and reverse_alignment is None:
+        return ['', '', '', '', '', '']
+    else:
+        if forward_alignment is None and reverse_alignment is not None:
+            strand = '-'
+            alignment = reverse_alignment
+        elif reverse_alignment is None and forward_alignment is not None:
+            strand = '+'
+            alignment = forward_alignment
+        elif forward_alignment is not None and reverse_alignment is not None:
+            forward_mismatches = forward_alignment.fuzzy_counts[0]
+            reverse_mismatches = reverse_alignment.fuzzy_counts[0]
+
+            if forward_mismatches > reverse_mismatches:
+                strand = '-'
+                alignment = reverse_alignment
+            else:
+                strand = '+'
+                alignment = forward_alignment
+
+        match_sequence = alignment.group()
+        mismatches = alignment.fuzzy_counts[0]
+        length = len(match_sequence)
+        start = alignment.start()
+        end = alignment.end()
+
+        return [match_sequence, mismatches, length, strand, start, end]
 
 """
 Main function to find off-target sites in reference-free fashion
 """
 def analyze(fastq1_filename, fastq2_filename, targetsite, out, name='', cells=''):
 
+    read_count = 0
     c = collections.Counter()
+
     fastq1_file = fq(fastq1_filename)
     fastq2_file = fq(fastq2_filename)
     for r1, r2 in itertools.izip(fastq1_file, fastq2_file):
         r1_sequence = r1[1].rstrip('\n')
         r2_sequence = r2[1].rstrip('\n')
-        joined_seq = reverse_complement(r1_sequence) + r2_sequence
+        joined_seq = reverseComplement(r1_sequence) + r2_sequence
         truncated_joined_seq = joined_seq[130:170]
-        offtarget, mismatch, length, strand, start, end = align_sequences(targetsite, truncated_joined_seq)
+        offtarget, mismatch, length, strand, start, end = alignSequences(targetsite, truncated_joined_seq)
         if offtarget:
-            # if strand == '-':
-            #     truncated_joined_seq = reverse_complement(truncated_joined_seq)
-            # # left_seq = truncated_joined_seq[start - 10:start]
-            # # check = truncated_joined_seq[start:end]
-            # # right_seq = truncated_joined_seq[end - 10:end]
             c[offtarget] += 1
-            print(offtarget, mismatch, length, strand, start, end, c[offtarget])
+
+        read_count += 1
+        if not read_count % 100000:
+            print(read_count/float(1000000), end=" ", file=sys.stderr)
+
+    print('Finished tabulating reference-free discovery counts.', file=sys.stderr)
+    for target_sequence, target_count in c.most_common():
+        print(target_sequence, target_count)
+
+
+
+
 
 def join_write_output(fastq1_filename, fastq2_filename, out):
     fastq1_file = fq(fastq1_filename)
@@ -97,7 +177,7 @@ def join_write_output(fastq1_filename, fastq2_filename, out):
             header = '>{0}'.format(r1[0])
             r1_sequence = r1[1].rstrip('\n')
             r2_sequence = r2[1].rstrip('\n')
-            joined_seq = reverse_complement(r1_sequence) + r2_sequence
+            joined_seq = reverseComplement(r1_sequence) + r2_sequence
             print(header, end='', file=o)
             print(joined_seq, file=o)
 
