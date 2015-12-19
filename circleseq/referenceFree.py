@@ -67,7 +67,7 @@ def align_sequences(ref_seq, query_seq):
         return ["", "", "", "", "", ""]
 """
 
-def regexFromSequence(seq, lookahead=True, mismatches=2):
+def regexFromSequence(seq, lookahead=True, indels=1, mismatches=2):
     """
     Given a sequence with ambiguous base characters, returns a regex that matches for
     the explicit (unambiguous) base characters
@@ -91,12 +91,12 @@ def regexFromSequence(seq, lookahead=True, mismatches=2):
         pattern = '(?:' + pattern + ')'
     if mismatches > 0:
         pattern = pattern + '{{s<={}}}'.format(mismatches)
-
+        # pattern = pattern + '{{i<={0},d<={1},1i+1d+s<={2}}}'.format(indels, indels, mismatches)
     return pattern
 
 
 
-def alignSequences(targetsite_sequence, window_sequence, max_mismatches = 7):
+def alignSequences(targetsite_sequence, window_sequence, max_mismatches = 6):
     """
     Given a targetsite and window, use a fuzzy regex to align the targetsite to
     the window. Returns the best match.
@@ -140,10 +140,11 @@ def alignSequences(targetsite_sequence, window_sequence, max_mismatches = 7):
 """
 Main function to find off-target sites in reference-free fashion
 """
-def analyze(fastq1_filename, fastq2_filename, targetsite, out, name='', cells=''):
+def analyze(fastq1_filename, fastq2_filename, targetsite, out_base, name='', cells=''):
 
     read_count = 0
     c = collections.Counter()
+    d = collections.defaultdict(list)
 
     fastq1_file = fq(fastq1_filename)
     fastq2_file = fq(fastq2_filename)
@@ -154,15 +155,28 @@ def analyze(fastq1_filename, fastq2_filename, targetsite, out, name='', cells=''
         truncated_joined_seq = joined_seq[130:170]
         offtarget, mismatch, length, strand, start, end = alignSequences(targetsite, truncated_joined_seq)
         if offtarget:
+            # print(read_count, offtarget,mismatch,length)
             c[offtarget] += 1
+            d[offtarget].append(joined_seq)
 
         read_count += 1
         if not read_count % 100000:
             print(read_count/float(1000000), end=" ", file=sys.stderr)
 
     print('Finished tabulating reference-free discovery counts.', file=sys.stderr)
-    for target_sequence, target_count in c.most_common():
-        print(target_sequence, target_count)
+    out_filename = out_base + '.txt'
+
+    with open(out_filename, 'w') as o:
+        for target_sequence, target_count in c.most_common():
+            print(target_sequence, target_count, file=o)
+            off_target_fasta_filename = '{0}_{1:04d}_{2}.fasta'.format(out_base, target_count, target_sequence)
+            with open(off_target_fasta_filename, 'w') as off_target_fasta_file:
+                j = 0
+                for sequence in d[target_sequence]:
+                    j += 1
+                    print('>{0:04d}_{1}_{2}'.format(target_count, target_sequence, j), file=off_target_fasta_file)
+                    print(sequence, file=off_target_fasta_file)
+
 
 
 
