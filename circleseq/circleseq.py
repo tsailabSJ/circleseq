@@ -19,7 +19,8 @@ logger = log.createCustomLogger('root')
 class CircleSeq:
 
     def __init__(self):
-        pass
+        self.read_threshold = 4
+        self.window_size = 10
 
     def parseManifest(self, manifest_path, sample='all'):
         logger.info('Loading manifest...')
@@ -34,6 +35,13 @@ class CircleSeq:
             self.BWA_path  = manifest_data['bwa']
             self.reference_genome = manifest_data['reference_genome']
             self.analysis_folder = manifest_data['analysis_folder']
+
+            # Allow the user to specify read threshold and windowsize if they'd like
+            if 'read_threshold' in manifest_data:
+                self.read_threshold = manifest_data['read_threshold']
+            if 'window_size' in manifest_data:
+                self.window_size = manifest_data['window_size']
+
             if sample == 'all':
                 self.samples = manifest_data['samples']
             else:

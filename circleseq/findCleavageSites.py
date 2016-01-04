@@ -15,7 +15,7 @@ import sys
 ### 1. Tabulate the start positions for the 2nd read in pair across the genome.
 def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder):
 
-    output_filename = os.path.join(output_folder, '{0}_{1}_coordinates.txt'.format(cells, name))
+    output_filename = os.path.join(output_folder, '{0}_coordinates.txt'.format(cells, name))
 
     sorted_bam_file = HTSeq.BAM_Reader(BamFileName)
     filename_base = os.path.basename(BamFileName)
@@ -23,7 +23,6 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder
     ga_windows = HTSeq.GenomicArray("auto", stranded=False)
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
-
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
