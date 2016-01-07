@@ -15,7 +15,7 @@ import sys
 ### 1. Tabulate the start positions for the 2nd read in pair across the genome.
 def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder):
 
-    output_filename = os.path.join(output_folder, '{0}_coordinates.txt'.format(cells, name))
+    output_filename = os.path.join(output_folder, '{0}_coordinates.txt'.format(name))
 
     sorted_bam_file = HTSeq.BAM_Reader(BamFileName)
     filename_base = os.path.basename(BamFileName)
@@ -23,6 +23,10 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder
     ga_windows = HTSeq.GenomicArray("auto", stranded=False)
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
     read_count = 0
+    current_pair_position = []
+    last_pair_position = []
+    ref_chr = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
+                '20', '21', '22', 'X', 'Y']
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
@@ -79,21 +83,27 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder
                     print("?")
 
 
-            # Only count pairs where they originate from within 6 bp start positions
-            if pair_ok and (first_read_chr == second_read_chr) and (
-            (first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 6)
-            or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 6)):
-                ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-                ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+            # Only count pairs where they are on the same chromosome, originate from within 6 bp start positions,
+            #
 
-                ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-                ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+            if pair_ok:
+                current_pair_position = [first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
+                if first_read_chr == second_read_chr and first_read_chr in ref_chr and current_pair_position != last_pair_position and \
+                ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 6)
+                or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 6)):
+                    ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                    ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                    ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
 
-                # Output read positions for plotting. Add gap.
-                print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
+                    ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                    ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                    ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+
+                    # Output read positions for plotting. Add gap.
+                    print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
                           first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
+
+                    last_pair_position = [ first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
 
             read_count += 1
             if not read_count % 100000:
@@ -219,7 +229,7 @@ def main():
     # parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
     parser.add_argument('--name', help='Targetsite Name', required=False)
     parser.add_argument('--cells', help='Cells', required=False)
-    parser.add_argument('--out', help='Output file base', required=False)
+    parser.add_argument('--out', help='Output file base', required=True)
 
     args = parser.parse_args()
 
