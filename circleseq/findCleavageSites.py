@@ -4,15 +4,16 @@ __author__ = 'shengdar'
 
 import argparse
 import HTSeq
-import itertools
 import os
 import pyfaidx
+import regex
 import string
 import swalign
 import sys
 
 
-### 1. Tabulate the start positions for the 2nd read in pair across the genome.
+""" 1. Tabulate the start positions for the 2nd read in pair across the genome.
+"""
 def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder):
 
     output_filename = os.path.join(output_folder, '{0}_coordinates.txt'.format(name))
@@ -84,7 +85,6 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder
 
 
             # Only count pairs where they are on the same chromosome, originate from within 6 bp start positions,
-            #
 
             if pair_ok:
                 current_pair_position = [first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
@@ -130,10 +130,13 @@ def find_windows(ga_windows, window_size):
 
     return ga_windows # Return consolidated GenomicArray
 
-### 3. Find actual sequences of potential off-target sites
+""" 3. Find actual sequences of potential off-target sites
+"""
 def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_name, target_cells, bam_filename, read_threshold, outfile_base):
-    outfile_matched = outfile_base + '_identified_matched.txt'
-    outfile_unmatched = outfile_base + '_identified_unmatched.txt'
+
+    # outfile_dirname, outfile_basename = os.path.split(outfile_base)
+    outfile_matched = '{0}_identified_matched.txt'.format(outfile_base)
+    outfile_unmatched = '{0}_identified_unmatched.txt'.format(outfile_base)
 
     with open(outfile_matched, 'w') as o1, open(outfile_unmatched, 'w') as o2:
         for iv, value in ga_windows.steps():
@@ -141,7 +144,7 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                 count = sum(list(ga[iv]))
                 if count >= read_threshold:
                     window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
-                    sequence, mismatches, length, strand,  target_start_relative, target_end_relative = align_sequences(target_sequence, window_sequence)
+                    sequence, mismatches, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, 7)
                     if strand == "+":
                         target_start_absolute = target_start_relative + iv.start - 20
                         target_end_absolute = target_end_relative + iv.start - 20
@@ -190,6 +193,79 @@ def align_sequences(ref_seq, query_seq):
         return [reverse_alignment.query[start:end], ref_length - reverse_alignment.matches - 1, end - start, strand, start, end]
     else:
         return ["", "", "", "", "", ""]
+
+def reverseComplement(sequence):
+    transtab = string.maketrans("ACGT","TGCA")
+    return sequence.translate(transtab)[::-1]
+
+def regexFromSequence(seq, lookahead=True, indels=1, mismatches=2):
+    """
+    Given a sequence with ambiguous base characters, returns a regex that matches for
+    the explicit (unambiguous) base characters
+    """
+    IUPAC_notation_regex = {'N': '[ATCGN]',
+                            'Y': '[CTY]',
+                            'R': '[AGR]',
+                            'W': '[ATW]',
+                            'S': '[CGS]',
+                            'A': 'A',
+                            'T': 'T',
+                            'C': 'C',
+                            'G': 'G'}
+
+    pattern = ''
+
+    for c in seq:
+        pattern += IUPAC_notation_regex[c]
+
+    if lookahead:
+        pattern = '(?:' + pattern + ')'
+    if mismatches > 0:
+        pattern = pattern + '{{s<={}}}'.format(mismatches)
+        # pattern = pattern + '{{i<={0},d<={1},1i+1d+s<={2}}}'.format(indels, indels, mismatches)
+    return pattern
+
+"""
+Given a targetsite and window, use a fuzzy regex to align the targetsite to
+the window. Returns the best match.
+"""
+def alignSequences(targetsite_sequence, window_sequence, max_mismatches = 6):
+
+
+    # Try both strands
+    query_regex = regexFromSequence(targetsite_sequence, mismatches=max_mismatches)
+    forward_alignment = regex.search(query_regex, window_sequence, regex.BESTMATCH)
+
+    # reverse_regex = regexFromSequence(reverseComplement(targetsite_sequence), mismatches=max_mismatches)
+    reverse_alignment = regex.search(query_regex, reverseComplement(window_sequence), regex.BESTMATCH)
+
+    if forward_alignment is None and reverse_alignment is None:
+        return ['', '', '', '', '', '']
+    else:
+        if forward_alignment is None and reverse_alignment is not None:
+            strand = '-'
+            alignment = reverse_alignment
+        elif reverse_alignment is None and forward_alignment is not None:
+            strand = '+'
+            alignment = forward_alignment
+        elif forward_alignment is not None and reverse_alignment is not None:
+            forward_mismatches = forward_alignment.fuzzy_counts[0]
+            reverse_mismatches = reverse_alignment.fuzzy_counts[0]
+
+            if forward_mismatches > reverse_mismatches:
+                strand = '-'
+                alignment = reverse_alignment
+            else:
+                strand = '+'
+                alignment = forward_alignment
+
+        match_sequence = alignment.group()
+        mismatches = alignment.fuzzy_counts[0]
+        length = len(match_sequence)
+        start = alignment.start()
+        end = alignment.end()
+
+        return [match_sequence, mismatches, length, strand, start, end]
 
 ### Get sequences from some reference genome
 def get_sequence(reference_genome, chromosome, start, end, strand="+"):

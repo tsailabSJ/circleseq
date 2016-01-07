@@ -9,7 +9,7 @@ import string
 import swalign
 import sys
 import collections
-
+from findCleavageSites import regexFromSequence, alignSequences
 """
 FASTQ generator function from umi package
 """
@@ -35,37 +35,6 @@ def fq(file):
 def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
     return sequence.translate(transtab)[::-1]
-
-"""
-### Smith-waterman alignment method
-
-### Smith-Waterman alignment of sequences
-def align_sequences(ref_seq, query_seq):
-    match = 2
-    mismatch = -1
-    ref_length = len(ref_seq)
-    matches_required = len(ref_seq) - 1 - 7 # allow up to 8 mismatches
-    scoring = swalign.NucleotideScoringMatrix(match, mismatch)
-    sw = swalign.LocalAlignment(scoring, gap_penalty=-100, gap_extension_penalty=-100, prefer_gap_runs=True)  # you can also choose gap penalties, etc...
-    forward_alignment = sw.align(ref_seq, query_seq)
-    reverse_alignment = sw.align(ref_seq, reverse_complement(query_seq))
-    if forward_alignment.matches >= matches_required and forward_alignment.matches > reverse_alignment.matches:
-        start_pad = forward_alignment.r_pos
-        start = forward_alignment.q_pos - start_pad
-        end_pad = ref_length - forward_alignment.r_end
-        end = forward_alignment.q_end + end_pad
-        strand = "+"
-        return [forward_alignment.query[start:end], ref_length - forward_alignment.matches - 1, end - start, strand, start, end]
-    elif reverse_alignment.matches >= matches_required and reverse_alignment.matches > forward_alignment.matches:
-        start_pad = reverse_alignment.r_pos
-        start = reverse_alignment.q_pos - start_pad
-        end_pad = ref_length - reverse_alignment.r_end
-        end = reverse_alignment.q_end + end_pad
-        strand = "-"
-        return [reverse_alignment.query[start:end], ref_length - reverse_alignment.matches - 1, end - start, strand, start, end]
-    else:
-        return ["", "", "", "", "", ""]
-"""
 
 def regexFromSequence(seq, lookahead=True, indels=1, mismatches=2):
     """
@@ -176,10 +145,6 @@ def analyze(fastq1_filename, fastq2_filename, targetsite, out_base, name='', cel
                     j += 1
                     print('>{0:04d}_{1}_{2}'.format(target_count, target_sequence, j), file=off_target_fasta_file)
                     print(sequence, file=off_target_fasta_file)
-
-
-
-
 
 
 def join_write_output(fastq1_filename, fastq2_filename, out):
