@@ -3,12 +3,13 @@ from __future__ import print_function
 __author__ = 'shengdar'
 
 import argparse
+import collections
 import HTSeq
 import os
 import pyfaidx
 import regex
 import string
-import swalign
+#import swalign
 import sys
 
 
@@ -89,8 +90,8 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder
             if pair_ok:
                 current_pair_position = [first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
                 if first_read_chr == second_read_chr and first_read_chr in ref_chr and current_pair_position != last_pair_position and \
-                ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 6)
-                or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 6)):
+                ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 20)
+                or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 20)):
                     ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
                     ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
                     ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
@@ -138,6 +139,8 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
     outfile_matched = '{0}_identified_matched.txt'.format(outfile_base)
     outfile_unmatched = '{0}_identified_unmatched.txt'.format(outfile_base)
 
+    matched_output_table = collections.defaultdict(list)
+
     with open(outfile_matched, 'w') as o1, open(outfile_unmatched, 'w') as o2:
         for iv, value in ga_windows.steps():
             if value:
@@ -167,7 +170,7 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                               iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name,
                               target_cells, full_name,  target_sequence, sep="\t", file=o2)
 
-### Smith-Waterman alignment of sequences
+"""### Smith-Waterman alignment of sequences
 def align_sequences(ref_seq, query_seq):
     match = 2
     mismatch = -1
@@ -193,6 +196,7 @@ def align_sequences(ref_seq, query_seq):
         return [reverse_alignment.query[start:end], ref_length - reverse_alignment.matches - 1, end - start, strand, start, end]
     else:
         return ["", "", "", "", "", ""]
+"""
 
 def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
@@ -230,8 +234,6 @@ Given a targetsite and window, use a fuzzy regex to align the targetsite to
 the window. Returns the best match.
 """
 def alignSequences(targetsite_sequence, window_sequence, max_mismatches = 6):
-
-
     # Try both strands
     query_regex = regexFromSequence(targetsite_sequence, mismatches=max_mismatches)
     forward_alignment = regex.search(query_regex, window_sequence, regex.BESTMATCH)

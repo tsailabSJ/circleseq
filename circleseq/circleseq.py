@@ -48,7 +48,7 @@ class CircleSeq:
                 self.samples = {}
                 self.samples[sample] = manifest_data['samples'][sample]
             # Make folders for output
-            for folder in [ 'aligned', 'identified', 'coordinates', 'unmatched', 'visualization' ]:
+            for folder in [ 'aligned', 'identified', 'visualization' ]:
                 output_folder = os.path.join(self.analysis_folder, folder)
                 if not os.path.exists(output_folder):
                     os.makedirs(output_folder)
