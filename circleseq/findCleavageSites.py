@@ -13,11 +13,13 @@ import string
 import sys
 
 
-""" 1. Tabulate the start positions for the 2nd read in pair across the genome.
+""" Tabulate the start positions for the 2nd read in pair across the genome.
+    Only consider alignments with matching positions from the beginning of the read.
+    For read pairs with multiple alignments, pick the one with matching positions at the beginning.
 """
-def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder):
+def tabulate_start_positions(BamFileName, cells, name, targetsite, outfile_base):
 
-    output_filename = os.path.join(output_folder, '{0}_coordinates.txt'.format(name))
+    output_filename = '{0}_coordinates.txt'.format(outfile_base)
 
     sorted_bam_file = HTSeq.BAM_Reader(BamFileName)
     filename_base = os.path.basename(BamFileName)
@@ -29,82 +31,96 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, output_folder
     last_pair_position = []
     ref_chr = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
                 '20', '21', '22', 'X', 'Y']
+    aqual_threshold = 0
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
                   'Read2_chr', 'Read1_start_position', 'Read2_strand']
         print(*header, sep='\t', file=o)
         for bundle in HTSeq.pair_SAM_alignments(sorted_bam_file, bundle=True):
-            pair_ok = False
-            if len(bundle) == 1:
+            output = False
+            first_read_chr, first_read_position, first_read_strand = None, None, None
+            second_read_chr, second_read_position, second_read_strand = None, None, None
+
+            if len(bundle) == 1: # single alignment
                 first_read, second_read = bundle[0]
-                if (first_read is not None) and (second_read is not None):
-                    if first_read.aligned and second_read.aligned:
+                if first_read.aligned:
+                    if first_read.aQual >= aqual_threshold and not first_read.flag & 1024 and \
+                    (first_read.iv.strand == '+' and first_read.cigar[0].type == 'M') or \
+                    (first_read.iv.strand == '-' and first_read.cigar[-1].type == 'M'):
                         first_read_chr = first_read.iv.chrom
                         first_read_position = first_read.iv.start_d
                         first_read_strand = first_read.iv.strand
-
+                if second_read.aligned:
+                    if second_read.aQual >= aqual_threshold and not first_read.flag & 1024 and \
+                    (second_read.iv.strand == '+' and second_read.cigar[0].type == 'M') or \
+                    (second_read.iv.strand == '-' and second_read.cigar[-1].type == 'M'):
                         second_read_chr = second_read.iv.chrom
                         second_read_position = second_read.iv.start_d
                         second_read_strand = second_read.iv.strand
-                        pair_ok = True
-            elif len(bundle) > 1:
+            elif len(bundle) > 1: # multiple alignments
                 first_read_list, second_read_list = zip(*bundle)
                 filtered_first_read_list = []
                 filtered_second_read_list = []
                 for read in first_read_list:
                     if read:
                         if read.aligned:
-                            if read.iv.strand == '+':
-                                if read.cigar[0].type == 'M':
+                            if read.iv.strand == '+' and read.cigar[0].type == 'M':
                                     filtered_first_read_list.append(read)
-                            elif read.iv.strand == '-':
-                                if read.cigar[-1].type == 'M':
+                            elif read.iv.strand == '-' and read.cigar[-1].type == 'M':
                                     filtered_first_read_list.append(read)
                 for read in second_read_list:
                     if read:
                         if read.aligned:
-                            if read.iv.strand == '+':
-                                if read.cigar[0].type == 'M':
+                            if read.iv.strand == '+' and read.cigar[0].type == 'M':
                                     filtered_second_read_list.append(read)
-                            elif read.iv.strand == '-':
-                                if read.cigar[-1].type == 'M':
+                            elif read.iv.strand == '-' and read.cigar[-1].type == 'M':
                                     filtered_second_read_list.append(read)
-                if len(filtered_first_read_list) == 1 and len(filtered_second_read_list) == 1: # there is a boundary case where there are multiple alignments for one of the reads
+                if len(filtered_first_read_list) == 1:
                     first_read = filtered_first_read_list[0]
-                    first_read_chr = first_read.iv.chrom
-                    first_read_position = first_read.iv.start_d
-                    first_read_strand = first_read.iv.strand
-
+                    if first_read.aQual >= aqual_threshold and not first_read.flag & 1024:
+                        first_read_chr = first_read.iv.chrom
+                        first_read_position = first_read.iv.start_d
+                        first_read_strand = first_read.iv.strand
+                if len(filtered_second_read_list) == 1:
                     second_read = filtered_second_read_list[0]
-                    second_read_chr = second_read.iv.chrom
-                    second_read_position = second_read.iv.start_d
-                    second_read_strand = second_read.iv.strand
-                    pair_ok = True
-                elif len(filtered_first_read_list) > 1 or len(filtered_second_read_list) > 1: # there is a boundary case where there are multiple alignments for one of the reads:
-                    print("?")
-
+                    if second_read.aQual >= aqual_threshold and not first_read.flag & 1024:
+                        second_read_chr = second_read.iv.chrom
+                        second_read_position = second_read.iv.start_d
+                        second_read_strand = second_read.iv.strand
 
             # Only count pairs where they are on the same chromosome, originate from within 6 bp start positions,
 
-            if pair_ok:
-                current_pair_position = [first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
-                if first_read_chr == second_read_chr and first_read_chr in ref_chr and current_pair_position != last_pair_position and \
-                ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 20)
-                or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 20)):
-                    ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                    ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-                    ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
 
-                    ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                    ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-                    ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+            # current_pair_position = [first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
+            # if first_read_chr == second_read_chr and first_read_chr in ref_chr and current_pair_position != last_pair_position and \
+            # ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 20)
+            # or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 20)):
+            # if current_pair_position != last_pair_position:
 
-                    # Output read positions for plotting. Add gap.
-                    print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
-                          first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
+            if first_read_chr == second_read_chr and first_read_chr in ref_chr and \
+            ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 20)
+            or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 20)):
 
-                    last_pair_position = [ first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
+                #if first_read_chr in ref_chr and first_read_position and first_read_strand:
+                ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                #    output = True
+
+                #if second_read_chr in ref_chr and second_read_position and second_read_strand:
+                ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                output = True
+
+            # Output read positions for plotting. Add gap.
+
+            if output == True:
+                print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
+                      first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
+
+            last_pair_position = [ first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
 
             read_count += 1
             if not read_count % 100000:
@@ -289,7 +305,7 @@ def analyze(ref, bam, targetsite, reads, windowsize, name, cells, out):
 
     reference_genome = pyfaidx.Fasta(ref)
     print("Reference genome loaded.", file=sys.stderr)
-    ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, output_folder)
+    ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, out)
     print("Tabulate start positions.", file=sys.stderr)
     ga_consolidated_windows = find_windows(ga_windows, windowsize)
     print("Get consolidated windows.", file=sys.stderr)
