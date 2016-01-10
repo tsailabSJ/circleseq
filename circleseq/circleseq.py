@@ -168,9 +168,9 @@ def parse_args():
     align_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
     align_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
 
-    parallel_parser = subparsers.add_parser('merge', help='Merge paired end reads')
-    parallel_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
-    align_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
+    merge_parser = subparsers.add_parser('merge', help='Merge paired end reads')
+    merge_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+    merge_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
 
     identify_parser = subparsers.add_parser('identify', help='Run identification only')
     identify_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
