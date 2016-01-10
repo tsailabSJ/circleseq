@@ -3,7 +3,7 @@ import argparse
 import itertools
 from utility import reverseComplement, fq
 
-def join_write_output(fastq1_filename, fastq2_filename, out):
+def mergeReads(fastq1_filename, fastq2_filename, out):
     fastq1_file = fq(fastq1_filename)
     fastq2_file = fq(fastq2_filename)
 
@@ -24,7 +24,7 @@ def main():
 
     args = parser.parse_args()
 
-    join_write_output(args.read1, args.read2, args.out)
+    mergeReads(args.read1, args.read2, args.out)
 
 if __name__ == "__main__":
     main()

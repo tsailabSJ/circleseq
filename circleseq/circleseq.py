@@ -4,6 +4,7 @@ circleseq.py as the wrapper for CIRCLE-seq analysis
 
 from alignReads import alignReads
 from visualization import visualizeOfftargets
+from mergeReads import mergeReads
 import argparse
 import os
 import sys
@@ -48,7 +49,7 @@ class CircleSeq:
                 self.samples = {}
                 self.samples[sample] = manifest_data['samples'][sample]
             # Make folders for output
-            for folder in [ 'aligned', 'identified', 'visualization' ]:
+            for folder in [ 'aligned', 'identified', 'fastq', 'visualization' ]:
                 output_folder = os.path.join(self.analysis_folder, folder)
                 if not os.path.exists(output_folder):
                     os.makedirs(output_folder)
@@ -73,6 +74,24 @@ class CircleSeq:
                 self.aligned[sample] = sample_alignment_path
                 self.aligned_sorted[sample] = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
                 logger.info('Finished aligning reads to genome.')
+
+        except Exception as e:
+            logger.error('Error aligning')
+            logger.error(traceback.format_exc())
+            quit()
+
+    def mergeReads(self):
+        logger.info('Merging reads...')
+
+        self.merged = {}
+        try:
+            for sample in self.samples:
+                sample_alignment_path = os.path.join(self.analysis_folder, 'fastq', sample + '_merged.fastq')
+                mergeReads(self.samples[sample]['read1'],
+                           self.samples[sample]['read2'],
+                           sample_alignment_path)
+                self.merged[sample] = sample_alignment_path
+                logger.info('Finished merging reads.')
 
         except Exception as e:
             logger.error('Error aligning')
@@ -147,6 +166,10 @@ def parse_args():
 
     align_parser = subparsers.add_parser('align', help='Run alignment only')
     align_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+    align_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
+
+    parallel_parser = subparsers.add_parser('merge', help='Merge paired end reads')
+    parallel_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
     align_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
 
     identify_parser = subparsers.add_parser('identify', help='Run identification only')
