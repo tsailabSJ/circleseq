@@ -9,7 +9,7 @@ import string
 import swalign
 import sys
 import collections
-from findCleavageSites import regexFromSequence, alignSequences
+from findCleavageSites import regexFromSequence, alignSequences, reverseComplement
 """
 FASTQ generator function from umi package
 """
