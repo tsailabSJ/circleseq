@@ -1,4 +1,4 @@
-**CIRCLE-seq: Comprehensive In vitro Reporting of CLeavage Effects by Sequencing**
+CIRCLE-seq: Comprehensive In vitro Reporting of CLeavage Effects by Sequencing
 ==================================================================================
 
 This is a repository for CIRCLE-seq analytical software, which takes sample-specific paired end FASTQ files as input and produces a list of CIRCLE-seq detected off-target cleavage sites as output.
@@ -6,12 +6,13 @@ This is a repository for CIRCLE-seq analytical software, which takes sample-spec
 Dependencies
 =======
 
-* Python (2.6, 2.7, or PyPy)
+* Python (2.7)
 * [bwa] alignment tool
 * [samtools] alignment format manipulation
 
 [bwa]: http://bio-bwa.sourceforge.net
 [samtools]: http://www.htslib.org
+
 **Usage**
 =========
 
