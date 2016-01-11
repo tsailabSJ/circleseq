@@ -207,6 +207,10 @@ def main():
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
         c.findCleavageSites()
+    elif args.command == 'merge':
+        c = CircleSeq()
+        c.parseManifest(args.manifest, args.sample)
+        c.mergeReads()
     elif args.command == 'visualize':
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
