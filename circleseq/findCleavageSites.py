@@ -159,7 +159,7 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                 count = sum(list(ga[iv]))
                 if count >= read_threshold:
                     window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
-                    sequence, mismatches, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, 7)
+                    sequence, distance, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, 7)
                     if strand == "+":
                         target_start_absolute = target_start_relative + iv.start - 20
                         target_end_absolute = target_end_relative + iv.start - 20
@@ -175,18 +175,18 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                     full_name = target_name + '_' + target_cells + '_' + name + '_' + str(read_count)
                     if sequence:
                         print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
-                              iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name,
+                              iv.start, iv.end, window_sequence, sequence, distance, length, filename, target_name,
                               target_cells, full_name, target_sequence, sep="\t", file=o1)
                     else:
                         print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
-                              iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name,
+                              iv.start, iv.end, window_sequence, sequence, distance, length, filename, target_name,
                               target_cells, full_name,  target_sequence, sep="\t", file=o2)
 
 def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
     return sequence.translate(transtab)[::-1]
 
-def regexFromSequence(seq, lookahead=True, indels=1, mismatches=2):
+def regexFromSequence(seq, lookahead=True, indels=2, mismatches=2):
     """
     Given a sequence with ambiguous base characters, returns a regex that matches for
     the explicit (unambiguous) base characters
@@ -209,8 +209,7 @@ def regexFromSequence(seq, lookahead=True, indels=1, mismatches=2):
     if lookahead:
         pattern = '(?:' + pattern + ')'
     if mismatches > 0:
-        pattern = pattern + '{{s<={}}}'.format(mismatches)
-        # pattern = pattern + '{{i<={0},d<={1},1i+1d+s<={2}}}'.format(indels, indels, mismatches)
+        pattern = pattern + '{{1i+1d<={0},s<={1}}}'.format(indels, mismatches)
     return pattern
 
 """
@@ -221,8 +220,6 @@ def alignSequences(targetsite_sequence, window_sequence, max_mismatches = 6):
     # Try both strands
     query_regex = regexFromSequence(targetsite_sequence, mismatches=max_mismatches)
     forward_alignment = regex.search(query_regex, window_sequence, regex.BESTMATCH)
-
-    # reverse_regex = regexFromSequence(reverseComplement(targetsite_sequence), mismatches=max_mismatches)
     reverse_alignment = regex.search(query_regex, reverseComplement(window_sequence), regex.BESTMATCH)
 
     if forward_alignment is None and reverse_alignment is None:
@@ -235,10 +232,10 @@ def alignSequences(targetsite_sequence, window_sequence, max_mismatches = 6):
             strand = '+'
             alignment = forward_alignment
         elif forward_alignment is not None and reverse_alignment is not None:
-            forward_mismatches = forward_alignment.fuzzy_counts[0]
-            reverse_mismatches = reverse_alignment.fuzzy_counts[0]
+            forward_distance = sum(forward_alignment.fuzzy_counts)
+            reverse_distance = sum(reverse_alignment.fuzzy_counts)
 
-            if forward_mismatches > reverse_mismatches:
+            if forward_distance > reverse_distance:
                 strand = '-'
                 alignment = reverse_alignment
             else:
@@ -246,12 +243,12 @@ def alignSequences(targetsite_sequence, window_sequence, max_mismatches = 6):
                 alignment = forward_alignment
 
         match_sequence = alignment.group()
-        mismatches = alignment.fuzzy_counts[0]
+        distance = sum(alignment.fuzzy_counts)
         length = len(match_sequence)
         start = alignment.start()
         end = alignment.end()
 
-        return [match_sequence, mismatches, length, strand, start, end]
+        return [match_sequence, distance, length, strand, start, end]
 
 ### Get sequences from some reference genome
 def get_sequence(reference_genome, chromosome, start, end, strand="+"):
