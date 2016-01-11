@@ -297,7 +297,7 @@ def regexFromSequence(seq, lookahead=True, indels=2, mismatches=2):
 Given a targetsite and window, use a fuzzy regex to align the targetsite to
 the window. Returns the best match.
 """
-def alignSequences(targetsite_sequence, window_sequence, max_mismatches = 6):
+def alignSequences(targetsite_sequence, window_sequence, max_mismatches=6):
     # Try both strands
     query_regex = regexFromSequence(targetsite_sequence, mismatches=max_mismatches)
     forward_alignment = regex.search(query_regex, window_sequence, regex.BESTMATCH)
