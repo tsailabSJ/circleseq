@@ -240,7 +240,7 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                 count = sum(list(ga[iv]))
                 if count >= read_threshold:
                     window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
-                    sequence, distance, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, 7)
+                    sequence, distance, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, max_mismatches=7)
                     if strand == "+":
                         target_start_absolute = target_start_relative + iv.start - 20
                         target_end_absolute = target_end_relative + iv.start - 20
@@ -267,7 +267,7 @@ def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
     return sequence.translate(transtab)[::-1]
 
-def regexFromSequence(seq, lookahead=True, indels=2, mismatches=2):
+def regexFromSequence(seq, lookahead=True, indels=1, mismatches=2):
     """
     Given a sequence with ambiguous base characters, returns a regex that matches for
     the explicit (unambiguous) base characters
@@ -290,7 +290,7 @@ def regexFromSequence(seq, lookahead=True, indels=2, mismatches=2):
     if lookahead:
         pattern = '(?:' + pattern + ')'
     if mismatches > 0:
-        pattern = pattern + '{{1i+1d<={0},s<={1}}}'.format(indels, mismatches)
+        pattern = pattern + '{{i<={0},d<={0},1i+1d+1s<={1}}}'.format(indels, mismatches)
     return pattern
 
 """
