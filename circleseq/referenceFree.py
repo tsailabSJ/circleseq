@@ -3,10 +3,7 @@ from __future__ import print_function
 import argparse
 import itertools
 import re
-import regex
 import gzip
-import string
-import swalign
 import sys
 import collections
 from findCleavageSites import regexFromSequence, alignSequences, reverseComplement

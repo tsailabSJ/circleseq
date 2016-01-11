@@ -9,7 +9,6 @@ import os
 import pyfaidx
 import regex
 import string
-#import swalign
 import sys
 
 
@@ -128,9 +127,6 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, outfile_base)
 
     return ga, ga_windows, ga_stranded
 
-def get_read_info(read):
-    pass
-
 ###  2. Find genomic windows (coordinate positions)
 def find_windows(ga_windows, window_size):
     # Initialize comparison position
@@ -185,34 +181,6 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                         print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
                               iv.start, iv.end, window_sequence, sequence, mismatches, length, filename, target_name,
                               target_cells, full_name,  target_sequence, sep="\t", file=o2)
-
-"""### Smith-Waterman alignment of sequences
-def align_sequences(ref_seq, query_seq):
-    match = 2
-    mismatch = -1
-    ref_length = len(ref_seq)
-    matches_required = len(ref_seq) - 1 - 7 # allow up to 8 mismatches
-    scoring = swalign.NucleotideScoringMatrix(match, mismatch)
-    sw = swalign.LocalAlignment(scoring, gap_penalty=-100, gap_extension_penalty=-100, prefer_gap_runs=True)  # you can also choose gap penalties, etc...
-    forward_alignment = sw.align(ref_seq, query_seq)
-    reverse_alignment = sw.align(ref_seq, reverse_complement(query_seq))
-    if forward_alignment.matches >= matches_required and forward_alignment.matches > reverse_alignment.matches:
-        start_pad = forward_alignment.r_pos
-        start = forward_alignment.q_pos - start_pad
-        end_pad = ref_length - forward_alignment.r_end
-        end = forward_alignment.q_end + end_pad
-        strand = "+"
-        return [forward_alignment.query[start:end], ref_length - forward_alignment.matches - 1, end - start, strand, start, end]
-    elif reverse_alignment.matches >= matches_required and reverse_alignment.matches > forward_alignment.matches:
-        start_pad = reverse_alignment.r_pos
-        start = reverse_alignment.q_pos - start_pad
-        end_pad = ref_length - reverse_alignment.r_end
-        end = reverse_alignment.q_end + end_pad
-        strand = "-"
-        return [reverse_alignment.query[start:end], ref_length - reverse_alignment.matches - 1, end - start, strand, start, end]
-    else:
-        return ["", "", "", "", "", ""]
-"""
 
 def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
@@ -293,24 +261,22 @@ def get_sequence(reference_genome, chromosome, start, end, strand="+"):
         seq = reference_genome[chromosome][int(start):int(end)].reverse.complement
     return str(seq)
 
-### Simple reverse_complement method
-def reverse_complement(sequence):
-    transtab = string.maketrans("ACGT","TGCA")
-    return sequence.translate(transtab)[::-1]
-
-def analyze(ref, bam, targetsite, reads, windowsize, name, cells, out):
+def analyze(ref, bam, targetsite, reads, windowsize, name, cells, out, merged=False):
     output_folder = os.path.dirname(out)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     reference_genome = pyfaidx.Fasta(ref)
     print("Reference genome loaded.", file=sys.stderr)
-    ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, out)
-    print("Tabulate start positions.", file=sys.stderr)
-    ga_consolidated_windows = find_windows(ga_windows, windowsize)
-    print("Get consolidated windows.", file=sys.stderr)
-    output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, reads, out)
-    print("Get alignments.", file=sys.stderr)
+    if merged:
+        pass
+    else:
+        ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, out)
+        print("Tabulate start positions.", file=sys.stderr)
+        ga_consolidated_windows = find_windows(ga_windows, windowsize)
+        print("Get consolidated windows.", file=sys.stderr)
+        output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, reads, out)
+        print("Get alignments.", file=sys.stderr)
 
 
 def main():
@@ -320,6 +286,7 @@ def main():
     parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
     parser.add_argument('--reads', help='Read threshold', default=4, type=int)
     parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
+    parser.add_argument('--merged', dest='merged', action='store_true', default=False)
     # parser.add_argument('--nofilter', help='Turn off filter for sequence', required=False, action='store_true')
     parser.add_argument('--name', help='Targetsite Name', required=False)
     parser.add_argument('--cells', help='Cells', required=False)
@@ -327,7 +294,7 @@ def main():
 
     args = parser.parse_args()
 
-    analyze(args.ref, args.bam, args.targetsite, args.reads, args.windowsize, args.name, args.cells, args.out)
+    analyze(args.ref, args.bam, args.targetsite, args.reads, args.windowsize, args.name, args.cells, args.out, args.merged)
 
 if __name__ == "__main__":
     main()

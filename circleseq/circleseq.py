@@ -80,15 +80,21 @@ class CircleSeq:
             logger.error(traceback.format_exc())
             quit()
 
-    def mergeReads(self):
+    def mergeAlignReads(self):
         logger.info('Merging reads...')
 
         self.merged = {}
         try:
             for sample in self.samples:
-                sample_alignment_path = os.path.join(self.analysis_folder, 'fastq', sample + '_merged.fastq.gz')
+                sample_merge_path = os.path.join(self.analysis_folder, 'fastq', sample + '_merged.fastq.gz')
                 mergeReads(self.samples[sample]['read1'],
                            self.samples[sample]['read2'],
+                           sample_merge_path)
+                sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', sample + '.sam')
+                alignReads(self.BWA_path,
+                           self.reference_genome,
+                           sample_merge_path,
+                           '',
                            sample_alignment_path)
                 self.merged[sample] = sample_alignment_path
                 logger.info('Finished merging reads.')
@@ -210,7 +216,7 @@ def main():
     elif args.command == 'merge':
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
-        c.mergeReads()
+        c.mergeAlignReads()
     elif args.command == 'visualize':
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
