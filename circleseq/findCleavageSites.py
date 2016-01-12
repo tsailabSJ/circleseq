@@ -340,7 +340,7 @@ def get_sequence(reference_genome, chromosome, start, end, strand="+"):
         seq = reference_genome[chromosome][int(start):int(end)].reverse.complement
     return str(seq)
 
-def analyze(ref, bam, targetsite, reads, windowsize, name, cells, out, merged=False):
+def analyze(ref, bam, targetsite, reads, windowsize, name, cells, out, merged=True):
     output_folder = os.path.dirname(out)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)

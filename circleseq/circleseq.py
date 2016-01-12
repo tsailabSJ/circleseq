@@ -113,7 +113,7 @@ class CircleSeq:
                 identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample)
                 findCleavageSites.analyze(self.reference_genome, sorted_bam_file, self.samples[sample]['target'],
                                           self.read_threshold, self.window_size, sample,
-                                          self.samples[sample]['description'], identified_sites_file)
+                                          self.samples[sample]['description'], identified_sites_file, merged=True)
         except Exception as e:
             logger.error('Error identifying off-target cleavage site.')
             logger.error(traceback.format_exc())
