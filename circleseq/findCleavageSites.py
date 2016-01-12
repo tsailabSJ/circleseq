@@ -356,7 +356,7 @@ def analyze(ref, bam, targetsite, reads, windowsize, name, cells, out, merged=Tr
         print("Tabulate individual start positions.", file=sys.stderr)
         ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, out)
     ga_consolidated_windows = find_windows(ga_windows, windowsize)
-    print("Get consolidated windows.", file=sys.stderr)
+    print("\nGet consolidated windows.", file=sys.stderr)
     output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, reads, out)
     print("Get alignments.", file=sys.stderr)
 
