@@ -42,6 +42,8 @@ class CircleSeq:
                 self.read_threshold = manifest_data['read_threshold']
             if 'window_size' in manifest_data:
                 self.window_size = manifest_data['window_size']
+            if 'mapq_threshold' in manifest_data:
+                self.window_size = manifest_data['mapq_threshold']
 
             if sample == 'all':
                 self.samples = manifest_data['samples']
@@ -109,7 +111,7 @@ class CircleSeq:
 
         try:
             for sample in self.samples:
-                sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
+                sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '.bam')
                 identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample)
                 findCleavageSites.analyze(self.reference_genome, sorted_bam_file, self.samples[sample]['target'],
                                           self.read_threshold, self.window_size, sample,
