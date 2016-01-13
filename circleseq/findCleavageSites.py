@@ -289,7 +289,7 @@ def regexFromSequence(seq, lookahead=True, errors=7):
 
     if lookahead:
         pattern = '(?:' + pattern + ')'
-    if mismatches > 0:
+    if errors > 0:
         pattern = pattern + '{{e<={0}}}'.format(errors)
     return pattern
 
