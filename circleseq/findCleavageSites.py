@@ -267,7 +267,7 @@ def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
     return sequence.translate(transtab)[::-1]
 
-def regexFromSequence(seq, lookahead=True, errors=7):
+def regexFromSequence(seq, lookahead=True, indels=1, errors=6):
     """
     Given a sequence with ambiguous base characters, returns a regex that matches for
     the explicit (unambiguous) base characters
@@ -290,7 +290,7 @@ def regexFromSequence(seq, lookahead=True, errors=7):
     if lookahead:
         pattern = '(?:' + pattern + ')'
     if errors > 0:
-        pattern = pattern + '{{e<={0}}}'.format(errors)
+        pattern = pattern + '{{i<={0},d<={0},s<={1},2i+2d+1s<={1}}}'.format(indels, errors)
     return pattern
 
 """
