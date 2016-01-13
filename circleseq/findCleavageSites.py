@@ -240,7 +240,7 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                 count = sum(list(ga[iv]))
                 if count >= read_threshold:
                     window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
-                    sequence, distance, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, max_mismatches=7)
+                    sequence, distance, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, max_errors=7)
                     if strand == "+":
                         target_start_absolute = target_start_relative + iv.start - 20
                         target_end_absolute = target_end_relative + iv.start - 20
@@ -267,7 +267,7 @@ def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
     return sequence.translate(transtab)[::-1]
 
-def regexFromSequence(seq, lookahead=True, indels=1, mismatches=2):
+def regexFromSequence(seq, lookahead=True, errors=7):
     """
     Given a sequence with ambiguous base characters, returns a regex that matches for
     the explicit (unambiguous) base characters
@@ -290,16 +290,16 @@ def regexFromSequence(seq, lookahead=True, indels=1, mismatches=2):
     if lookahead:
         pattern = '(?:' + pattern + ')'
     if mismatches > 0:
-        pattern = pattern + '{{i<={0},d<={0},1i+1d+1s<={1}}}'.format(indels, mismatches)
+        pattern = pattern + '{{e<={0}}}'.format(errors)
     return pattern
 
 """
 Given a targetsite and window, use a fuzzy regex to align the targetsite to
 the window. Returns the best match.
 """
-def alignSequences(targetsite_sequence, window_sequence, max_mismatches=6):
+def alignSequences(targetsite_sequence, window_sequence, max_errors=6):
     # Try both strands
-    query_regex = regexFromSequence(targetsite_sequence, mismatches=max_mismatches)
+    query_regex = regexFromSequence(targetsite_sequence, errors=max_errors)
     forward_alignment = regex.search(query_regex, window_sequence, regex.BESTMATCH)
     reverse_alignment = regex.search(query_regex, reverseComplement(window_sequence), regex.BESTMATCH)
 
