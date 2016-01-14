@@ -47,19 +47,21 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, outfil
                     # Note strand polarity is reversed for position 151 (because it is part of the strand that was
                     # reverse complemented initially before alignment
                     if cigar_operation.type == 'M':
-                        if cigar_operation.query_from <= 145 and 150 < cigar_operation.query_to:
+                        if cigar_operation.query_from <= 144 and 150 <= cigar_operation.query_to:
                             first_read_cigar = cigar_operation
                             first_read_chr = cigar_operation.ref_iv.chrom
-                            distance = 150 - cigar_operation.query_from
+                            first_end = min(cigar_operation.query_to, 151)
+                            distance = first_end - cigar_operation.query_from
                             first_read_position = cigar_operation.ref_iv.start + distance
                             if cigar_operation.ref_iv.strand == '+':
                                 first_read_strand = '-'
                             elif cigar_operation.ref_iv.strand == '-':
                                 first_read_strand = '+'
-                        if cigar_operation.query_from <= 151 and 156 < cigar_operation.query_to:
+                        if cigar_operation.query_from <= 152 and 158 <= cigar_operation.query_to:
                             second_read_cigar = cigar_operation
                             second_read_chr = cigar_operation.ref_iv.chrom
-                            distance = 151 - cigar_operation.query_from
+                            second_end = max(151, cigar_operation.query_from)
+                            distance = second_end - cigar_operation.query_from
                             if cigar_operation.ref_iv.strand == '+':
                                 second_read_position = cigar_operation.ref_iv.start + distance
                                 second_read_strand = '+'
