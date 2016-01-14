@@ -71,14 +71,17 @@ def alignSequences(targetsite_sequence, window_sequence, max_mismatches=6):
 def main():
     target = 'GAGTCCGAGCAGAAGAAGAANGG'
     # windowsequence = 'GAAGGGCCTGAGTCCGAGCAGAAGAAGAAGGGCTCCCATCACATCAACCGGT'
-    windowsequence = 'GGCCTGAGTCCGAGCAGAAGAAGAAGGGCTCCCATCACATCAAC'
+    windowsequence = 'GGCCTGAGTCCGAGCAGAAGCAAGAAGGGCTCCCATCACATCAAC'
 
     pattern = regexFromSequence(target, mismatches=7)
 
     match = regex.search(pattern, windowsequence, flags=regex.BESTMATCH)
 
+    a = 3
+
     matches = regex.findall(pattern, windowsequence)
 
-    print(matches)
+    print(match)
+
 if __name__ == "__main__":
     main()
