@@ -69,19 +69,19 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, outfil
                                 second_read_position = cigar_operation.ref_iv.start + distance
                                 second_read_strand = '-'
 
-                # if first_read_position >= 0 and first_read_chr in ref_chr:
-                if first_read_chr in ref_chr and first_read_chr == second_read_chr and first_read_position is not None and second_read_position is not None:
-                    if abs(first_read_position - second_read_position) <= 20:
-                        output = True
-                        ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                        ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-                        ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                if first_read_position >= 0 and first_read_chr in ref_chr:
+                # if first_read_chr in ref_chr and first_read_chr == second_read_chr and first_read_position is not None and second_read_position is not None:
+                    # if abs(first_read_position - second_read_position) <= 20:
+                    output = True
+                    ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                    ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                    ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
 
-                    # if second_read_position >= 0 and second_read_chr in ref_chr:
-                    #     output = True
-                        ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                        ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-                        ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                if second_read_position >= 0 and second_read_chr in ref_chr:
+                    output = True
+                    ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                    ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                    ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
 
                 if output == True:
                     print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
