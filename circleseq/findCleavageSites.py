@@ -221,7 +221,7 @@ def find_windows(ga_windows, window_size):
     # Iterate through window GenomicArray and consolidate windows that are within 3 bp, up to a maximum of 10 bp.
     for iv, value in ga_windows.steps():
         if value:
-            if iv.chrom != last.chrom or iv.start - last.end > window_size or iv.end - last.start <= 10:
+            if iv.chrom != last.chrom or iv.start - last.end > window_size or iv.end - last.start > 10:
                 last = iv
             else:
                 consolidated_interval = HTSeq.GenomicInterval(iv.chrom, last.start, iv.end)
