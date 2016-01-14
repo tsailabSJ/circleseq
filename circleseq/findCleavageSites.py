@@ -25,6 +25,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, outfil
     ga = HTSeq.GenomicArray("auto", stranded=False)
     ga_windows = HTSeq.GenomicArray("auto", stranded=False)
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
+
     read_count = 0
     ref_chr = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
                 '20', '21', '22', 'X', 'Y']
@@ -36,6 +37,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, outfil
         print(*header, sep='\t', file=o)
 
         for read in sorted_bam_file:
+            output = False
             first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand = None, None, None, None, None, None
             # if not read.flag & 2048 and read.aQual > aqual_threshold:
             if read.aQual > aqual_threshold:
@@ -65,19 +67,23 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, outfil
                                 second_read_position = cigar_operation.ref_iv.start + distance
                                 second_read_strand = '-'
 
-                if first_read_position >= 0 and first_read_chr in ref_chr:
-                    print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
-                          first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
-                    ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                    ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-                    ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                # if first_read_position >= 0 and first_read_chr in ref_chr:
+                if first_read_chr in ref_chr and first_read_chr == second_read_chr and first_read_position is not None and second_read_position is not None:
+                    if abs(first_read_position - second_read_position) <= 20:
+                        output = True
+                        ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                        ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                        ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
 
-                if second_read_position >= 0 and second_read_chr in ref_chr:
+                    # if second_read_position >= 0 and second_read_chr in ref_chr:
+                    #     output = True
+                        ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                        ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                        ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+
+                if output == True:
                     print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
                           first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
-                    ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                    ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-                    ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
                 # else:
                 #     print(first_read_cigar)
                 #     print(second_read_cigar)
@@ -212,10 +218,10 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, outfile_base)
 def find_windows(ga_windows, window_size):
     # Initialize comparison position
     last = HTSeq.GenomicInterval("0", 0, 0)
-    # Iterate through window GenomicArray and consolidate windows that are within 3 bp
+    # Iterate through window GenomicArray and consolidate windows that are within 3 bp, up to a maximum of 10 bp.
     for iv, value in ga_windows.steps():
         if value:
-            if iv.chrom != last.chrom or iv.start - last.end > window_size:
+            if iv.chrom != last.chrom or iv.start - last.end > window_size and iv.end - last.start <= 10:
                 last = iv
             else:
                 consolidated_interval = HTSeq.GenomicInterval(iv.chrom, last.start, iv.end)
@@ -240,7 +246,7 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                 count = sum(list(ga[iv]))
                 if count >= read_threshold:
                     window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
-                    sequence, distance, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, max_errors=7)
+                    sequence, distance, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, max_errors=6)
                     if strand == "+":
                         target_start_absolute = target_start_relative + iv.start - 20
                         target_end_absolute = target_end_relative + iv.start - 20
