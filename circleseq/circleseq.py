@@ -21,7 +21,11 @@ class CircleSeq:
 
     def __init__(self):
         self.read_threshold = 4
-        self.window_size = 10
+        self.window_size = 3
+        self.mapq_threshold = 0
+        self.start_threshold = 1
+        self.gap_threshold = 1
+        self.merged_analysis = True
 
     def parseManifest(self, manifest_path, sample='all'):
         logger.info('Loading manifest...')
@@ -42,8 +46,14 @@ class CircleSeq:
                 self.read_threshold = manifest_data['read_threshold']
             if 'window_size' in manifest_data:
                 self.window_size = manifest_data['window_size']
-            if 'mapq_threshold' in manifest_data:
+            if 'mapq' in manifest_data:
                 self.window_size = manifest_data['mapq_threshold']
+            if 'start' in manifest_data:
+                self.window_size = manifest_data['start_threshold']
+            if 'gap' in manifest_data:
+                self.window_size = manifest_data['gap_threshold']
+            if 'merged' in manifest_data:
+                self.window_size = manifest_data['merged_threshold']
 
             if sample == 'all':
                 self.samples = manifest_data['samples']
@@ -114,8 +124,8 @@ class CircleSeq:
                 sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '.bam')
                 identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample)
                 findCleavageSites.analyze(self.reference_genome, sorted_bam_file, self.samples[sample]['target'],
-                                          self.read_threshold, self.window_size, sample,
-                                          self.samples[sample]['description'], identified_sites_file, merged=True)
+                                          self.read_threshold, self.window_size, self.mapq_threshold, self.gap_threshold,
+                                          self.start_threshold, sample, self.samples[sample]['description'], identified_sites_file, merged=True)
         except Exception as e:
             logger.error('Error identifying off-target cleavage site.')
             logger.error(traceback.format_exc())

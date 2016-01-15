@@ -16,7 +16,7 @@ import sys
     Identify genomic coordinates for reads mapping across 151/152 bp position.
     Add positions to genomic array.
 """
-def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, outfile_base):
+def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, outfile_base):
     output_filename = '{0}_coordinates.txt'.format(outfile_base)
 
     sorted_bam_file = HTSeq.BAM_Reader(BamFileName)
@@ -29,7 +29,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, outfil
     read_count = 0
     ref_chr = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
                 '20', '21', '22', 'X', 'Y']
-    aqual_threshold = 0
+
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
@@ -40,14 +40,14 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, outfil
             output = False
             first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand = None, None, None, None, None, None
             # if not read.flag & 2048 and read.aQual > aqual_threshold:
-            if read.aQual > aqual_threshold:
+            if read.aQual > mapq_threshold:
 
                 for cigar_operation in read.cigar:
-                    # Identify positions that capture 151 and 152 of read
+                    # Identify positions that end in position 151 and start at position 151
                     # Note strand polarity is reversed for position 151 (because it is part of the strand that was
                     # reverse complemented initially before alignment
                     if cigar_operation.type == 'M':
-                        if cigar_operation.query_from <= 143 and 148 <= cigar_operation.query_to:
+                        if (cigar_operation.query_from <= 146 - start_threshold) and (151 - start_threshold <= cigar_operation.query_to):
                             first_read_cigar = cigar_operation
                             first_read_chr = cigar_operation.ref_iv.chrom
                             first_end = min(cigar_operation.query_to, 151)
@@ -57,7 +57,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, outfil
                                 first_read_strand = '-'
                             elif cigar_operation.ref_iv.strand == '-':
                                 first_read_strand = '+'
-                        if cigar_operation.query_from <= 154 and 159 <= cigar_operation.query_to:
+                        if (cigar_operation.query_from <= 151 + start_threshold) and (156 + start_threshold <= cigar_operation.query_to):
                             second_read_cigar = cigar_operation
                             second_read_chr = cigar_operation.ref_iv.chrom
                             second_end = max(151, cigar_operation.query_from)
@@ -69,30 +69,21 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, outfil
                                 second_read_position = cigar_operation.ref_iv.start + distance
                                 second_read_strand = '-'
 
-                if first_read_position >= 0 and first_read_chr in ref_chr:
-                # if first_read_chr in ref_chr and first_read_chr == second_read_chr and first_read_position is not None and second_read_position is not None:
-                    # if abs(first_read_position - second_read_position) <= 20:
-                    output = True
-                    ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                    ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-                    ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                if first_read_chr == second_read_chr and first_read_chr in ref_chr and first_read_position is not None and second_read_position is not None:
+                    if abs(first_read_position - second_read_position) <= gap_threshold:
+                        output = True
+                        ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                        ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                        ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
 
-                if second_read_position >= 0 and second_read_chr in ref_chr:
-                    output = True
-                    ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                    ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-                    ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                        ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                        ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                        ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
 
                 if output == True:
                     print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
                           first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
-                # else:
-                #     print(first_read_cigar)
-                #     print(second_read_cigar)
-                #     print(read)
-                #     print("DISCARD", name, targetsite, cells, filename_base, first_read_chr, first_read_position,
-                #           first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t')
-                #     pass
+
             read_count += 1
             if not read_count % 100000:
                 print(read_count/float(1000000), end=" ", file=sys.stderr)
@@ -348,7 +339,7 @@ def get_sequence(reference_genome, chromosome, start, end, strand="+"):
         seq = reference_genome[chromosome][int(start):int(end)].reverse.complement
     return str(seq)
 
-def analyze(ref, bam, targetsite, reads, windowsize, name, cells, out, merged=True):
+def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_threshold, start_threshold, name, cells, out, merged=True):
     output_folder = os.path.dirname(out)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -358,7 +349,7 @@ def analyze(ref, bam, targetsite, reads, windowsize, name, cells, out, merged=Tr
 
     if merged:
         print("Tabulate merged start positions.", file=sys.stderr)
-        ga, ga_windows, ga_stranded = tabulate_merged_start_positions(bam, cells, name, targetsite, out)
+        ga, ga_windows, ga_stranded = tabulate_merged_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out)
 
     else:
         print("Tabulate individual start positions.", file=sys.stderr)
@@ -376,6 +367,9 @@ def main():
     parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
     parser.add_argument('--reads', help='Read threshold', default=4, type=int)
     parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
+    parser.add_argument('--mapq', help='mapq threshold', default=0, type=int)
+    parser.add_argument('--gap', help='Gap threshold', default=1, type=int)
+    parser.add_argument('--start', help='Start threshold', default=1, type=int)
     parser.add_argument('--merged', dest='merged', action='store_true', default=False)
     parser.add_argument('--name', help='Targetsite Name', required=False)
     parser.add_argument('--cells', help='Cells', required=False)
@@ -383,7 +377,7 @@ def main():
 
     args = parser.parse_args()
 
-    analyze(args.ref, args.bam, args.targetsite, args.reads, args.windowsize, args.name, args.cells, args.out, args.merged)
+    analyze(args.ref, args.bam, args.targetsite, args.reads, args.windowsize, args.mapq, args.gap, args.start, args.name, args.cells, args.out, args.merged)
 
 if __name__ == "__main__":
     main()
