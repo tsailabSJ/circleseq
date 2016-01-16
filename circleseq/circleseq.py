@@ -46,11 +46,11 @@ class CircleSeq:
                 self.read_threshold = manifest_data['read_threshold']
             if 'window_size' in manifest_data:
                 self.window_size = manifest_data['window_size']
-            if 'mapq' in manifest_data:
+            if 'mapq_threshold' in manifest_data:
                 self.window_size = manifest_data['mapq_threshold']
-            if 'start' in manifest_data:
+            if 'start_threshold' in manifest_data:
                 self.window_size = manifest_data['start_threshold']
-            if 'gap' in manifest_data:
+            if 'gap_threshold' in manifest_data:
                 self.window_size = manifest_data['gap_threshold']
             if 'merged' in manifest_data:
                 self.window_size = manifest_data['merged_threshold']
