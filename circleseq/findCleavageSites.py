@@ -4,6 +4,7 @@ __author__ = 'shengdar'
 
 import argparse
 import collections
+import logging
 import HTSeq
 import os
 import pyfaidx
@@ -346,7 +347,7 @@ def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_thresho
 
     reference_genome = pyfaidx.Fasta(ref)
     print("Reference genome loaded.", file=sys.stderr)
-
+    print('Reads: {0}, Window: {1}, MAPQ: {2}, Gap: {3}, Start {4}'.format(reads, windowsize, mapq_threshold, gap_threshold, start_threshold), file=sys.stderr)
     if merged:
         print("Tabulate merged start positions.", file=sys.stderr)
         ga, ga_windows, ga_stranded = tabulate_merged_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out)
