@@ -351,7 +351,6 @@ def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_thresho
     if merged:
         print("Tabulate merged start positions.", file=sys.stderr)
         ga, ga_windows, ga_stranded = tabulate_merged_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out)
-
     else:
         print("Tabulate individual start positions.", file=sys.stderr)
         ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, out)
@@ -360,17 +359,39 @@ def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_thresho
     output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, reads, out)
     print("Get alignments.", file=sys.stderr)
 
+def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, gap_threshold, start_threshold, name, cells, out, merged=True):
+
+    output_filename = out + '_counts.txt'
+    with open(output_filename, 'w') as o:
+        if merged:
+            print("Tabulate nuclease merged start positions.", file=sys.stderr)
+            nuclease_ga, nuclease_ga_windows, nuclease_ga_stranded = tabulate_merged_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_NUCLEASE')
+            print("Tabulate control merged start positions.", file=sys.stderr)
+            control_ga, control_ga_windows, control_ga_stranded = tabulate_merged_start_positions(control, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_CONTROL')
+            print("Writing counts to {0}".format(output_filename), file=sys.stderr)
+
+            print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads', file=o)
+
+            for iv, value in nuclease_ga.steps():
+                if value:
+                    for position in iv.xrange(step=1):
+                        window = HTSeq.GenomicInterval(position.chrom, position.pos - windowsize, position.pos + windowsize + 1)
+                        nuclease_window_counts = int(sum(nuclease_ga[window]))
+                        control_window_counts = int(sum(control_ga[window]))
+                        print(position.chrom, position.pos, int(nuclease_ga[position]), int(control_ga[position]), nuclease_window_counts, control_window_counts, file=o)
+
 
 def main():
     parser = argparse.ArgumentParser(description='Identify off-target candidates from Illumina short read sequencing data.')
     parser.add_argument('--ref', help='Reference Genome Fasta', required=True)
     parser.add_argument('--bam', help='Sorted BAM file', required=True)
+    parser.add_argument('--control', help='Control BAM file', required=False)
     parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
     parser.add_argument('--reads', help='Read threshold', default=4, type=int)
     parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
     parser.add_argument('--mapq', help='mapq threshold', default=0, type=int)
-    parser.add_argument('--gap', help='Gap threshold', default=1, type=int)
-    parser.add_argument('--start', help='Start threshold', default=1, type=int)
+    parser.add_argument('--gap', help='Gap threshold', default=3, type=int)
+    parser.add_argument('--start', help='Start threshold', default=1 , type=int)
     parser.add_argument('--merged', dest='merged', action='store_true', default=False)
     parser.add_argument('--name', help='Targetsite Name', required=False)
     parser.add_argument('--cells', help='Cells', required=False)
@@ -378,7 +399,12 @@ def main():
 
     args = parser.parse_args()
 
-    analyze(args.ref, args.bam, args.targetsite, args.reads, args.windowsize, args.mapq, args.gap, args.start, args.name, args.cells, args.out, args.merged)
+    # Run the comparison if the control bam is specified, otherwise run the standard site identification routine.
+    if args.control:
+        print("Nuclease: {0}\nControl: {1}".format(args.bam, args.control), file=sys.stderr)
+        compare(args.ref, args.bam, args.control, args.targetsite, args.reads, args.windowsize, args.mapq, args.gap, args.start, args.name, args.cells, args.out, args.merged)
+    else:
+        analyze(args.ref, args.bam, args.targetsite, args.reads, args.windowsize, args.mapq, args.gap, args.start, args.name, args.cells, args.out, args.merged)
 
 if __name__ == "__main__":
     main()
