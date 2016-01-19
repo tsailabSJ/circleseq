@@ -370,9 +370,18 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
             control_ga, control_ga_windows, control_ga_stranded = tabulate_merged_start_positions(control, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_CONTROL')
             print("Writing counts to {0}".format(output_filename), file=sys.stderr)
 
-            print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads', file=o)
+            combined_ga = HTSeq.GenomicArray("auto", stranded=False)
 
             for iv, value in nuclease_ga.steps():
+                if value:
+                    combined_ga[iv] = 1
+            for iv, value in control_ga.steps():
+                if value:
+                    combined_ga[iv] = 1
+
+            print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads', file=o)
+
+            for iv, value in combined_ga.steps():
                 if value:
                     for position in iv.xrange(step=1):
                         window = HTSeq.GenomicInterval(position.chrom, position.pos - windowsize, position.pos + windowsize + 1)
