@@ -383,18 +383,30 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                 if value:
                     combined_ga[iv] = 1
 
-            print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads', file=o)
+            print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads',
+                  'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads', 'Nuclease_10k_Window_Reads', 'Control_10k_Window_Reads',
+                  'Nuclease_Position_Coverage', 'Control_Position_Coverage', file=o)
 
             for iv, value in combined_ga.steps():
                 if value:
                     for position in iv.xrange(step=1):
                         window = HTSeq.GenomicInterval(position.chrom, position.pos - windowsize, position.pos + windowsize + 1)
+                        one_k_window = HTSeq.GenomicInterval(position.chrom, position.pos - 500, position.pos + windowsize + 500)
+                        ten_k_window = HTSeq.GenomicInterval(position.chrom, position.pos - 5000, position.pos + windowsize + 5000)
+
                         nuclease_window_counts = int(sum(nuclease_ga[window]))
+                        nuclease_one_k_window_counts = int(sum(nuclease_ga[one_k_window]))
+                        nuclease_ten_k_window_counts = int(sum(nuclease_ga[ten_k_window]))
+
                         control_window_counts = int(sum(control_ga[window]))
+                        control_one_k_window_counts = int(sum(control_ga[one_k_window]))
+                        control_ten_k_window_counts = int(sum(control_ga[ten_k_window]))
+
                         nuclease_coverage = int(nuclease_ga_coverage[position])
                         control_coverage = int(control_ga_coverage[position])
-                        print(position.chrom, position.pos, int(nuclease_ga[position]), int(control_ga[position]), nuclease_window_counts, control_window_counts,
-                              nuclease_coverage, control_coverage)
+                        print(position.chrom, position.pos, int(nuclease_ga[position]), int(control_ga[position]),
+                              nuclease_window_counts, control_window_counts, nuclease_one_k_window_counts, control_one_k_window_counts,
+                              nuclease_ten_k_window_counts, control_ten_k_window_counts, nuclease_coverage, control_coverage, file=o)
 
 
 def main():
