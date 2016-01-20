@@ -26,6 +26,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
     ga = HTSeq.GenomicArray("auto", stranded=False)
     ga_windows = HTSeq.GenomicArray("auto", stranded=False)
     ga_stranded = HTSeq.GenomicArray("auto", stranded=True)
+    ga_coverage = HTSeq.GenomicArray("auto", stranded=False)
 
     read_count = 0
     ref_chr = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
@@ -38,10 +39,13 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
         print(*header, sep='\t', file=o)
 
         for read in sorted_bam_file:
+
             output = False
             first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand = None, None, None, None, None, None
             # if not read.flag & 2048 and read.aQual > aqual_threshold:
-            if read.aQual > mapq_threshold:
+            if read.aQual > mapq_threshold and read.aligned:
+
+                ga_coverage[read.iv] += 1
 
                 for cigar_operation in read.cigar:
                     # Identify positions that end in position 151 and start at position 151
@@ -89,7 +93,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
             if not read_count % 100000:
                 print(read_count/float(1000000), end=" ", file=sys.stderr)
 
-    return ga, ga_windows, ga_stranded
+    return ga, ga_windows, ga_stranded, ga_coverage
 
 
 """ Tabulate the start positions for the 2nd read in pair across the genome.
@@ -350,7 +354,7 @@ def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_thresho
     print('Reads: {0}, Window: {1}, MAPQ: {2}, Gap: {3}, Start {4}'.format(reads, windowsize, mapq_threshold, gap_threshold, start_threshold), file=sys.stderr)
     if merged:
         print("Tabulate merged start positions.", file=sys.stderr)
-        ga, ga_windows, ga_stranded = tabulate_merged_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out)
+        ga, ga_windows, ga_stranded, ga_coverage = tabulate_merged_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out)
     else:
         print("Tabulate individual start positions.", file=sys.stderr)
         ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, out)
@@ -365,9 +369,9 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
     with open(output_filename, 'w') as o:
         if merged:
             print("Tabulate nuclease merged start positions.", file=sys.stderr)
-            nuclease_ga, nuclease_ga_windows, nuclease_ga_stranded = tabulate_merged_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_NUCLEASE')
+            nuclease_ga, nuclease_ga_windows, nuclease_ga_stranded, nuclease_ga_coverage = tabulate_merged_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_NUCLEASE')
             print("Tabulate control merged start positions.", file=sys.stderr)
-            control_ga, control_ga_windows, control_ga_stranded = tabulate_merged_start_positions(control, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_CONTROL')
+            control_ga, control_ga_windows, control_ga_stranded, control_ga_coverage = tabulate_merged_start_positions(control, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_CONTROL')
             print("Writing counts to {0}".format(output_filename), file=sys.stderr)
 
             combined_ga = HTSeq.GenomicArray("auto", stranded=False)
@@ -387,7 +391,10 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                         window = HTSeq.GenomicInterval(position.chrom, position.pos - windowsize, position.pos + windowsize + 1)
                         nuclease_window_counts = int(sum(nuclease_ga[window]))
                         control_window_counts = int(sum(control_ga[window]))
-                        print(position.chrom, position.pos, int(nuclease_ga[position]), int(control_ga[position]), nuclease_window_counts, control_window_counts, file=o)
+                        nuclease_coverage = int(nuclease_ga_coverage[position])
+                        control_coverage = int(control_ga_coverage[position])
+                        print(position.chrom, position.pos, int(nuclease_ga[position]), int(control_ga[position]), nuclease_window_counts, control_window_counts,
+                              nuclease_coverage, control_coverage)
 
 
 def main():
