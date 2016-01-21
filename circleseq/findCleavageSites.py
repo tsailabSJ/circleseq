@@ -10,6 +10,7 @@ import math
 import os
 import pyfaidx
 import regex
+import string
 import scipy.stats
 import sys
 
