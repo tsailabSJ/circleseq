@@ -7,7 +7,6 @@ import collections
 import logging
 import HTSeq
 import math
-import numpy as np
 import os
 import pyfaidx
 import regex
@@ -395,9 +394,9 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                 if value:
                     for position in iv.xrange(step=1):
                         # Define the windows
-                        window = HTSeq.GenomicInterval(position.chrom, position.pos - windowsize, position.pos + windowsize + 1)
-                        one_k_window = HTSeq.GenomicInterval(position.chrom, position.pos - 500, position.pos + windowsize + 500)
-                        ten_k_window = HTSeq.GenomicInterval(position.chrom, position.pos - 5000, position.pos + windowsize + 5000)
+                        window = HTSeq.GenomicInterval(position.chrom, max(0, position.pos - windowsize), position.pos + windowsize + 1)
+                        one_k_window = HTSeq.GenomicInterval(position.chrom, max(0, position.pos - 500), position.pos + windowsize + 500)
+                        ten_k_window = HTSeq.GenomicInterval(position.chrom, max(0, position.pos - 5000), position.pos + windowsize + 5000)
 
                         # Start mapping positions, at the specific base position
                         nuclease_position_counts = nuclease_ga[position]
