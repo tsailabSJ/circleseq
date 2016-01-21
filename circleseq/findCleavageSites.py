@@ -6,10 +6,12 @@ import argparse
 import collections
 import logging
 import HTSeq
+import math
+import numpy as np
 import os
 import pyfaidx
 import regex
-import string
+import scipy.stats
 import sys
 
 
@@ -364,6 +366,11 @@ def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_thresho
     print("Get alignments.", file=sys.stderr)
 
 def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, gap_threshold, start_threshold, name, cells, out, merged=True):
+    output_list = list()
+    position_list = list()
+    narrow_window_list = list()
+    one_k_window_list = list()
+    ten_k_window_list = list()
 
     output_filename = out + '_counts.txt'
     with open(output_filename, 'w') as o:
@@ -376,6 +383,7 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
 
             combined_ga = HTSeq.GenomicArray("auto", stranded=False)
 
+            # For all positions with detected read mapping positions, put into a combined genomicArray
             for iv, value in nuclease_ga.steps():
                 if value:
                     combined_ga[iv] = 1
@@ -383,30 +391,74 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                 if value:
                     combined_ga[iv] = 1
 
-            print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads',
-                  'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads', 'Nuclease_10k_Window_Reads', 'Control_10k_Window_Reads',
-                  'Nuclease_Position_Coverage', 'Control_Position_Coverage', file=o)
-
             for iv, value in combined_ga.steps():
                 if value:
                     for position in iv.xrange(step=1):
+                        # Define the windows
                         window = HTSeq.GenomicInterval(position.chrom, position.pos - windowsize, position.pos + windowsize + 1)
                         one_k_window = HTSeq.GenomicInterval(position.chrom, position.pos - 500, position.pos + windowsize + 500)
                         ten_k_window = HTSeq.GenomicInterval(position.chrom, position.pos - 5000, position.pos + windowsize + 5000)
 
-                        nuclease_window_counts = int(sum(nuclease_ga[window]))
-                        nuclease_one_k_window_counts = int(sum(nuclease_ga[one_k_window]))
-                        nuclease_ten_k_window_counts = int(sum(nuclease_ga[ten_k_window]))
+                        # Start mapping positions, at the specific base position
+                        nuclease_position_counts = nuclease_ga[position]
+                        control_position_counts = control_ga[position]
+                        ratio_nuclease_control_position_counts = math.log((1+nuclease_position_counts)/(1+control_position_counts), 2)
 
-                        control_window_counts = int(sum(control_ga[window]))
-                        control_one_k_window_counts = int(sum(control_ga[one_k_window]))
-                        control_ten_k_window_counts = int(sum(control_ga[ten_k_window]))
+                        # In the narrow (parameter-specified) window
+                        nuclease_window_counts = sum(nuclease_ga[window])
+                        control_window_counts = sum(control_ga[window])
+                        ratio_nuclease_control_narrow_window_counts = math.log((1+nuclease_window_counts)/(1+control_window_counts), 2)
 
-                        nuclease_coverage = int(nuclease_ga_coverage[position])
-                        control_coverage = int(control_ga_coverage[position])
-                        print(position.chrom, position.pos, int(nuclease_ga[position]), int(control_ga[position]),
+                        # In a 1kb window
+                        nuclease_one_k_window_counts = sum(nuclease_ga[one_k_window])
+                        control_one_k_window_counts = sum(control_ga[one_k_window])
+                        ratio_nuclease_control_one_k_window_counts = math.log((1+nuclease_one_k_window_counts)/(1+control_one_k_window_counts), 2)
+
+                        # In a 10kb window
+                        nuclease_ten_k_window_counts = sum(nuclease_ga[ten_k_window])
+                        control_ten_k_window_counts = sum(control_ga[ten_k_window])
+                        ratio_nuclease_control_ten_k_window_counts = math.log((1+nuclease_ten_k_window_counts)/(1+control_ten_k_window_counts), 2)
+
+                        # The coverage (not start positions), may not use this directly
+                        nuclease_coverage = nuclease_ga_coverage[position]
+                        control_coverage = control_ga_coverage[position]
+
+                        # A list of the outputs, that we will go through again to assign percentiles
+                        row = [position.chrom, position.pos, nuclease_position_counts, control_position_counts,
                               nuclease_window_counts, control_window_counts, nuclease_one_k_window_counts, control_one_k_window_counts,
-                              nuclease_ten_k_window_counts, control_ten_k_window_counts, nuclease_coverage, control_coverage, file=o)
+                              nuclease_ten_k_window_counts, control_ten_k_window_counts, nuclease_coverage, control_coverage,
+                              ratio_nuclease_control_position_counts, ratio_nuclease_control_narrow_window_counts,
+                              ratio_nuclease_control_one_k_window_counts, ratio_nuclease_control_ten_k_window_counts]
+                        output_list.append(row)
+
+                        # A list of the the various ratios that we will use to calculate the percentiles
+                        narrow_window_list.append(ratio_nuclease_control_narrow_window_counts)
+                        position_list.append(ratio_nuclease_control_position_counts)
+                        one_k_window_list.append(ratio_nuclease_control_one_k_window_counts)
+                        ten_k_window_list.append(ratio_nuclease_control_ten_k_window_counts)
+
+            print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads',
+            'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads', 'Nuclease_10k_Window_Reads', 'Control_10k_Window_Reads',
+            'Nuclease_Position_Coverage', 'Control_Position_Coverage',
+            'log2_Ratio_Nuclease_Control_Position', 'log2_Ratio_Nuclease_Control_Narrow_Window',
+            'log2_Ratio_Nuclease_Control_1k_Window', 'log2_Ratio_Nuclease_Control_10k_Window',
+            'Position_Ratio_Percentile', 'Narrow_Window_Ratio_Percentile',
+            '1k_Window_Ratio_Percentile', '10k_Window_Ratio_Percentile', file=o, sep='\t')
+
+            for fields in output_list:
+                position_score = fields[12]
+                position_percentile = scipy.stats.percentileofscore(position_list, position_score)
+
+                narrow_window_score = fields[13]
+                narrow_window_percentile = scipy.stats.percentileofscore(narrow_window_list, narrow_window_score)
+
+                one_k_window_score = fields[14]
+                one_k_window_percentile = scipy.stats.percentileofscore(one_k_window_list, one_k_window_score)
+
+                ten_k_window_score = fields[15]
+                ten_k_window_percentile = scipy.stats.percentileofscore(ten_k_window_list, ten_k_window_score)
+
+                print(*(fields + [position_percentile,narrow_window_percentile, one_k_window_percentile, ten_k_window_percentile]), file=o, sep='\t')
 
 
 def main():
