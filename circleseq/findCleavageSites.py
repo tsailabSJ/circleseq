@@ -43,7 +43,8 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
         for read in sorted_bam_file:
 
             output = False
-            first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand = None, None, None, None, None, None
+            first_read_chr, first_read_position, first_read_strand = None, None, None
+            second_read_chr, second_read_position, second_read_strand = None, None, None
             # if not read.flag & 2048 and read.aQual > aqual_threshold:
             if read.aQual > mapq_threshold and read.aligned:
 
@@ -376,9 +377,11 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
     with open(output_filename, 'w') as o:
         if merged:
             print("Tabulate nuclease merged start positions.", file=sys.stderr)
-            nuclease_ga, nuclease_ga_windows, nuclease_ga_stranded, nuclease_ga_coverage = tabulate_merged_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_NUCLEASE')
+            nuclease_ga, nuclease_ga_windows, nuclease_ga_stranded, nuclease_ga_coverage = tabulate_merged_start_positions(bam,
+                cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_NUCLEASE')
             print("Tabulate control merged start positions.", file=sys.stderr)
-            control_ga, control_ga_windows, control_ga_stranded, control_ga_coverage = tabulate_merged_start_positions(control, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_CONTROL')
+            control_ga, control_ga_windows, control_ga_stranded, control_ga_coverage = tabulate_merged_start_positions(control,
+                cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_CONTROL')
             print("Writing counts to {0}".format(output_filename), file=sys.stderr)
 
             combined_ga = HTSeq.GenomicArray("auto", stranded=False)
@@ -432,31 +435,36 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                         output_list.append(row)
 
                         # A list of the the various ratios that we will use to calculate the percentiles
-                        narrow_window_list.append(ratio_nuclease_control_narrow_window_counts)
                         position_list.append(ratio_nuclease_control_position_counts)
+                        narrow_window_list.append(ratio_nuclease_control_narrow_window_counts)
                         one_k_window_list.append(ratio_nuclease_control_one_k_window_counts)
                         ten_k_window_list.append(ratio_nuclease_control_ten_k_window_counts)
 
+            position_list_ranks = scipy.stats.rankdata(position_list)
+            narrow_window_ranks = scipy.stats.rankdata(narrow_window_list)
+            one_k_window_ranks = scipy.stats.rankdata(one_k_window_list)
+            ten_k_window_ranks = scipy.stats.rankdata(ten_k_window_list)
+
+            number_positions = len(position_list)
+
+            position_list_percentiles = [ x / number_positions * 100 for x in position_list_ranks]
+            narrow_window_list_percentiles = [ x / number_positions * 100 for x in narrow_window_ranks]
+            one_k_window_list_percentiles = [ x / number_positions * 100 for x in one_k_window_ranks]
+            ten_k_window_list_percentiles = [ x / number_positions * 100 for x in ten_k_window_ranks]
+
             print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads',
-            'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads', 'Nuclease_10k_Window_Reads', 'Control_10k_Window_Reads',
-            'Nuclease_Position_Coverage', 'Control_Position_Coverage',
-            'log2_Ratio_Nuclease_Control_Position', 'log2_Ratio_Nuclease_Control_Narrow_Window',
-            'log2_Ratio_Nuclease_Control_1k_Window', 'log2_Ratio_Nuclease_Control_10k_Window',
-            'Position_Ratio_Percentile', 'Narrow_Window_Ratio_Percentile',
-            '1k_Window_Ratio_Percentile', '10k_Window_Ratio_Percentile', file=o, sep='\t')
+                'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads', 'Nuclease_10k_Window_Reads', 'Control_10k_Window_Reads',
+                'Nuclease_Position_Coverage', 'Control_Position_Coverage',
+                'log2_Ratio_Nuclease_Control_Position', 'log2_Ratio_Nuclease_Control_Narrow_Window',
+                'log2_Ratio_Nuclease_Control_1k_Window', 'log2_Ratio_Nuclease_Control_10k_Window',
+                'Position_Ratio_Percentile', 'Narrow_Window_Ratio_Percentile',
+                '1k_Window_Ratio_Percentile', '10k_Window_Ratio_Percentile', file=o, sep='\t')
 
-            for fields in output_list:
-                position_score = fields[12]
-                position_percentile = scipy.stats.percentileofscore(position_list, position_score)
-
-                narrow_window_score = fields[13]
-                narrow_window_percentile = scipy.stats.percentileofscore(narrow_window_list, narrow_window_score)
-
-                one_k_window_score = fields[14]
-                one_k_window_percentile = scipy.stats.percentileofscore(one_k_window_list, one_k_window_score)
-
-                ten_k_window_score = fields[15]
-                ten_k_window_percentile = scipy.stats.percentileofscore(ten_k_window_list, ten_k_window_score)
+            for idx, fields in enumerate(output_list):
+                position_percentile = position_list_percentiles[idx]
+                narrow_window_percentile = narrow_window_list_percentiles[idx]
+                one_k_window_percentile = one_k_window_list_percentiles[idx]
+                ten_k_window_percentile = ten_k_window_list_percentiles[idx]
 
                 print(*(fields + [position_percentile,narrow_window_percentile, one_k_window_percentile, ten_k_window_percentile]), file=o, sep='\t')
 
