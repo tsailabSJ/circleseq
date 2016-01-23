@@ -367,11 +367,15 @@ def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_thresho
     print("Get alignments.", file=sys.stderr)
 
 def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, gap_threshold, start_threshold, name, cells, out, merged=True):
+
     output_list = list()
     position_list = list()
     narrow_window_list = list()
     one_k_window_list = list()
     ten_k_window_list = list()
+    reference_genome = pyfaidx.Fasta(ref)
+    combined_ga = HTSeq.GenomicArray("auto", stranded=False) # GenomicArray to store the union of control and nuclease positions
+    offtarget_ga_windows = HTSeq.GenomicArray("auto", stranded=False) # GenomicArray to store potential off-target sites
 
     output_filename = out + '_counts.txt'
     with open(output_filename, 'w') as o:
@@ -383,8 +387,6 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
             control_ga, control_ga_windows, control_ga_stranded, control_ga_coverage = tabulate_merged_start_positions(control,
                 cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, out + '_CONTROL')
             print("Writing counts to {0}".format(output_filename), file=sys.stderr)
-
-            combined_ga = HTSeq.GenomicArray("auto", stranded=False)
 
             # For all positions with detected read mapping positions, put into a combined genomicArray
             for iv, value in nuclease_ga.steps():
@@ -465,8 +467,15 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                 narrow_window_percentile = narrow_window_list_percentiles[idx]
                 one_k_window_percentile = one_k_window_list_percentiles[idx]
                 ten_k_window_percentile = ten_k_window_list_percentiles[idx]
-
+                if narrow_window_percentile > 99 and one_k_window_percentile > 99:
+                    read_chr = fields[0]
+                    read_position = fields[1]
+                    offtarget_ga_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = 1
                 print(*(fields + [position_percentile,narrow_window_percentile, one_k_window_percentile, ten_k_window_percentile]), file=o, sep='\t')
+
+            output_alignments(nuclease_ga, offtarget_ga_windows, reference_genome, targetsite, name, cells, bam, reads, out)
+
+
 
 
 def main():
