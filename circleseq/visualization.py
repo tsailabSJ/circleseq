@@ -5,7 +5,7 @@ import os
 box_size = 15
 v_spacing = 3
 
-colors = {'G': '#F5F500', 'A': '#FF5454', 'T': '#00D118', 'C': '#26A8FF', 'N': '#B3B3B3'}
+colors = {'G': '#F5F500', 'A': '#FF5454', 'T': '#00D118', 'C': '#26A8FF', 'N': '#B3B3B3', '-': '#FFFFFF'}
 
 def parseSitesFile(infile):
     offtargets = []
@@ -65,15 +65,17 @@ def visualizeOfftargets(infile, outfile, title=None):
     # Draw aligned sequence rows
     y_offset += 10 # leave some extra space after the reference row
     for j, seq in enumerate(offtargets):
-        y = y_offset + j * box_size
-        for i, c in enumerate(seq['seq']):
-            x = x_offset + i * box_size
-            if c == ref_seq[i] or ref_seq[i] == 'N':
-                dwg.add(dwg.text(u"\u2022", insert=(x + 4.5, 2 * box_size + y - 4), fill='black', style="font-size:10px; font-family:Courier"))
-            else:
-                dwg.add(dwg.rect((x, box_size + y), (box_size, box_size), fill=colors[c]))
-                dwg.add(dwg.text(c, insert=(x + 3, 2 * box_size + y - 3), fill='black', style="font-size:15px; font-family:Courier"))
-
+        if len(seq['seq']) == len(ref_seq): # mismatches and/or deletions
+            y = y_offset + j * box_size
+            for i, c in enumerate(seq['seq']):
+                x = x_offset + i * box_size
+                if c == ref_seq[i] or ref_seq[i] == 'N':
+                    dwg.add(dwg.text(u"\u2022", insert=(x + 4.5, 2 * box_size + y - 4), fill='black', style="font-size:10px; font-family:Courier"))
+                else:
+                    dwg.add(dwg.rect((x, box_size + y), (box_size, box_size), fill=colors[c]))
+                    dwg.add(dwg.text(c, insert=(x + 3, 2 * box_size + y - 3), fill='black', style="font-size:15px; font-family:Courier"))
+        else: # This is where we would visualize the insertions.
+            pass
         reads_text = dwg.text(str(seq['reads']), insert=(box_size * (len(ref_seq) + 1) + 20, y_offset + box_size * (j + 2) - 2), fill='black', style="font-size:15px; font-family:Courier")
         dwg.add(reads_text)
 
