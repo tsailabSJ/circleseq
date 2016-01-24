@@ -1,4 +1,5 @@
 import regex
+import nwalign as nw
 
 def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
@@ -69,19 +70,22 @@ def alignSequences(targetsite_sequence, window_sequence, max_mismatches=6):
         return [match_sequence, distance, length, strand, start, end]
 
 def main():
-    target = 'GAGTCCGAGCAGAAGAAGAANGG'
-    # windowsequence = 'GAAGGGCCTGAGTCCGAGCAGAAGAAGAAGGGCTCCCATCACATCAACCGGT'
-    windowsequence = 'GGCCTGAGTCCGAGCAGAAGCAAGAAGGGCTCCCATCACATCAAC'
+    # target = 'GAGTCCGAGCAGAAGAAGAANGG'
+    # # windowsequence = 'GAAGGGCCTGAGTCCGAGCAGAAGAAGAAGGGCTCCCATCACATCAACCGGT'
+    # windowsequence = 'GGCCTGAGTCCGAGCAGAAGCAAGAAGGGCTCCCATCACATCAAC'
+    #
+    # pattern = regexFromSequence(target, mismatches=7)
+    #
+    # match = regex.search(pattern, windowsequence, flags=regex.BESTMATCH)
+    # matches = regex.findall(pattern, windowsequence)
 
-    pattern = regexFromSequence(target, mismatches=7)
 
-    match = regex.search(pattern, windowsequence, flags=regex.BESTMATCH)
-
-    a = 3
-
-    matches = regex.findall(pattern, windowsequence)
+    match = nw.global_align('CATCCAAGCAGAAGAAGAAGAG', 'GAGTCCGAGCAGAAGAAGAANGG', gap_open=-10, gap_extend=-100, matrix='NUC_SIMPLE')
 
     print(match)
+
+
+
 
 if __name__ == "__main__":
     main()

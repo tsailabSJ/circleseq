@@ -7,6 +7,7 @@ import collections
 import logging
 import HTSeq
 import math
+import nwalign as nw
 import os
 import pyfaidx
 import regex
@@ -336,7 +337,12 @@ def alignSequences(targetsite_sequence, window_sequence, max_errors=6):
         start = alignment.start()
         end = alignment.end()
 
-        return [match_sequence, distance, length, strand, start, end]
+        if length != len(targetsite_sequence):
+            realigned_match_sequence, realigned_target = nw.global_align(match_sequence, targetsite_sequence,
+                                                                         gap_open=-10, gap_extend=-100, matrix='NUC_SIMPLE')
+            return [realigned_match_sequence, distance, length, strand, start, end]
+        else:
+            return [match_sequence, distance, length, strand, start, end]
 
 """ Get sequences from some reference genome
 """
@@ -376,7 +382,7 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
     reference_genome = pyfaidx.Fasta(ref)
     combined_ga = HTSeq.GenomicArray("auto", stranded=False) # GenomicArray to store the union of control and nuclease positions
     offtarget_ga_windows = HTSeq.GenomicArray("auto", stranded=False) # GenomicArray to store potential off-target sites
-
+   
     output_filename = out + '_counts.txt'
     with open(output_filename, 'w') as o:
         if merged:
@@ -474,9 +480,6 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                 print(*(fields + [position_percentile,narrow_window_percentile, one_k_window_percentile, ten_k_window_percentile]), file=o, sep='\t')
 
             output_alignments(nuclease_ga, offtarget_ga_windows, reference_genome, targetsite, name, cells, bam, reads, out)
-
-
-
 
 def main():
     parser = argparse.ArgumentParser(description='Identify off-target candidates from Illumina short read sequencing data.')

@@ -27,7 +27,7 @@ def parseSitesFile(infile):
 def visualizeOfftargets(infile, outfile, title=None):
 
     output_folder = os.path.dirname(outfile)
-    if not os.path.exists(output_folder):
+    if output_folder and not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     # Get offtargets array from file
