@@ -338,8 +338,9 @@ def alignSequences(targetsite_sequence, window_sequence, max_errors=6):
         end = alignment.end()
 
         if length != len(targetsite_sequence):
+            path = os.path.dirname(os.path.abspath(__file__))
             realigned_match_sequence, realigned_target = nw.global_align(match_sequence, targetsite_sequence,
-                                                                         gap_open=-10, gap_extend=-100, matrix='NUC_SIMPLE')
+                                                                         gap_open=-10, gap_extend=-100, matrix='{0}/NUC_SIMPLE'.format(path))
             return [realigned_match_sequence, distance, length, strand, start, end]
         else:
             return [match_sequence, distance, length, strand, start, end]
