@@ -465,40 +465,30 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                         # Start mapping positions, at the specific base position
                         nuclease_position_counts = nuclease_ga[position]
                         control_position_counts = control_ga[position]
-                        ratio_nuclease_control_position_counts = math.log((1+nuclease_position_counts)/(1+control_position_counts), 2)
 
                         # In the narrow (parameter-specified) window
                         nuclease_window_counts = sum(nuclease_ga[window])
                         control_window_counts = sum(control_ga[window])
-                        ratio_nuclease_control_narrow_window_counts = math.log((1+nuclease_window_counts)/(1+control_window_counts), 2)
 
                         # In a 1kb window
                         nuclease_one_k_window_counts = sum(nuclease_ga[one_k_window])
                         control_one_k_window_counts = sum(control_ga[one_k_window])
-                        ratio_nuclease_control_one_k_window_counts = math.log((1+nuclease_one_k_window_counts)/(1+control_one_k_window_counts), 2)
 
                         # In a 10kb window
                         nuclease_ten_k_window_counts = sum(nuclease_ga[ten_k_window])
                         control_ten_k_window_counts = sum(control_ga[ten_k_window])
-                        ratio_nuclease_control_ten_k_window_counts = math.log((1+nuclease_ten_k_window_counts)/(1+control_ten_k_window_counts), 2)
-
-                        # The coverage (not start positions), may not use this directly
-                        nuclease_coverage = nuclease_ga_coverage[position]
-                        control_coverage = control_ga_coverage[position]
 
                         # A list of the outputs, that we will go through again to assign percentiles
                         row = [position.chrom, position.pos, nuclease_position_counts, control_position_counts,
                               nuclease_window_counts, control_window_counts, nuclease_one_k_window_counts, control_one_k_window_counts,
-                              nuclease_ten_k_window_counts, control_ten_k_window_counts, nuclease_coverage, control_coverage,
-                              ratio_nuclease_control_position_counts, ratio_nuclease_control_narrow_window_counts,
-                              ratio_nuclease_control_one_k_window_counts, ratio_nuclease_control_ten_k_window_counts]
+                              nuclease_ten_k_window_counts, control_ten_k_window_counts]
                         output_list.append(row)
 
                         # A list of the the various ratios that we will use to calculate the percentiles
-                        position_list.append(ratio_nuclease_control_position_counts)
-                        narrow_window_list.append(ratio_nuclease_control_narrow_window_counts)
-                        one_k_window_list.append(ratio_nuclease_control_one_k_window_counts)
-                        ten_k_window_list.append(ratio_nuclease_control_ten_k_window_counts)
+                        position_list.append(nuclease_position_counts)
+                        narrow_window_list.append(nuclease_window_counts)
+                        one_k_window_list.append(nuclease_one_k_window_counts)
+                        ten_k_window_list.append(nuclease_ten_k_window_counts)
 
             position_list_ranks = scipy.stats.rankdata(position_list)
             narrow_window_ranks = scipy.stats.rankdata(narrow_window_list)
@@ -514,11 +504,7 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
 
             print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads',
                 'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads', 'Nuclease_10k_Window_Reads', 'Control_10k_Window_Reads',
-                'Nuclease_Position_Coverage', 'Control_Position_Coverage',
-                'log2_Ratio_Nuclease_Control_Position', 'log2_Ratio_Nuclease_Control_Narrow_Window',
-                'log2_Ratio_Nuclease_Control_1k_Window', 'log2_Ratio_Nuclease_Control_10k_Window',
-                'Position_Ratio_Percentile', 'Narrow_Window_Ratio_Percentile',
-                '1k_Window_Ratio_Percentile', '10k_Window_Ratio_Percentile', file=o, sep='\t')
+                'Position_Percentile', 'Narrow_Window_Percentile', '1k_Window_Percentile', '10k_Window_Percentile', file=o, sep='\t')
 
             for idx, fields in enumerate(output_list):
                 position_percentile = position_list_percentiles[idx]
