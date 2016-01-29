@@ -14,7 +14,7 @@ import regex
 import string
 import scipy.stats
 import sys
-
+import itertools
 
 """ Tabulate merged start positions.
     Identify genomic coordinates for reads mapping across 151/152 bp position.
@@ -42,7 +42,6 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
         print(*header, sep='\t', file=o)
 
         for read in sorted_bam_file:
-
             output = False
             first_read_chr, first_read_position, first_read_strand = None, None, None
             second_read_chr, second_read_position, second_read_strand = None, None, None
@@ -98,7 +97,6 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
                 print(read_count/float(1000000), end=" ", file=sys.stderr)
 
     return ga, ga_windows, ga_stranded, ga_coverage
-
 
 """ Tabulate the start positions for the 2nd read in pair across the genome.
     Only consider alignments with matching positions from the beginning of the read.
@@ -237,12 +235,12 @@ def find_windows(ga_windows, window_size):
 def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_name, target_cells, bam_filename, read_threshold, outfile_base):
 
     # outfile_dirname, outfile_basename = os.path.split(outfile_base)
-    outfile_matched = '{0}_identified_matched.txt'.format(outfile_base)
+    outfile_matched_temp = '{0}_identified_matched_temp.txt'.format(outfile_base)
     outfile_unmatched = '{0}_identified_unmatched.txt'.format(outfile_base)
 
     matched_output_table = collections.defaultdict(list)
 
-    with open(outfile_matched, 'w') as o1, open(outfile_unmatched, 'w') as o2:
+    with open(outfile_matched_temp, 'w') as o1, open(outfile_unmatched, 'w') as o2:
         for iv, value in ga_windows.steps():
             if value:
                 count = sum(list(ga[iv]))
@@ -270,6 +268,9 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                         print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
                               iv.start, iv.end, window_sequence, sequence, distance, length, filename, target_name,
                               target_cells, full_name,  target_sequence, sep="\t", file=o2)
+
+    outfile_matched = '{0}_identified_matched.txt'.format(outfile_base)
+    consolidate_duplicates('{0}_identified_matched_temp.txt'.format(outfile_base), outfile_matched)
 
 def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
@@ -345,6 +346,56 @@ def alignSequences(targetsite_sequence, window_sequence, max_errors=6):
         else:
             return [match_sequence, distance, length, strand, start, end]
 
+""" Consolidate Read count for duplicated  off-target sites """
+def consolidate_duplicates(table, out_name):
+    chromosome = []
+    position = []
+    read = []
+
+    with open(table) as f:
+        for line in f:
+            position = position +  [ int( line.split()[1] ) ]
+            chromosome = chromosome + [ line.split()[0] ]
+            read = read + [ int(line.split()[4]) ]
+
+    my_dict = collections.defaultdict(list)
+    for index,item in enumerate(position):
+        my_dict[item].append(index)
+    duplicated_item = [ [key,value] for key,value in my_dict.items() if len(value)>1 ]
+
+    duplicated_chromosome = [ [ chromosome[index] for index in duplicated_item[pos][1] ] for pos in range(len(duplicated_item)) ]
+    duplicated_read = [ [ read[index] for index in duplicated_item[pos][1] ] for pos in range(len(duplicated_item)) ]
+    duplicated_pair = []  #chromosome and start postition of off-target sites with duplicated start position
+    duplicated_set = []   #total read count and counter used to determined if position has been stored already 
+
+    # split lines for common chromosome and start (if any)
+    for duple,chromo,read in itertools.izip(duplicated_item, duplicated_chromosome, duplicated_read):
+        if len(set( chromo )) == 1:
+            duplicated_pair.append( [chromo[0], str(duple[0])] )
+            duplicated_set.append( [sum(read)] + [0] )        
+        else:
+            for unique_chromo in list(set( chromo )):
+                indices = [i for i, x in enumerate(chromo) if x == unique_chromo]
+                duplicated_pair.append( [unique_chromo, str(duple[0])] )
+                duplicated_set.append( [sum([read[i] for i in indices])] + [0] )
+
+    out_table = open(out_name, 'w')
+    with open(table) as f:
+        if len(duplicated_item) == 0:
+            for line in f:
+                out_table.write(line)
+        else:
+            for line in f:
+                if line.split()[0:2] not in duplicated_pair:
+                    out_table.write(line)         
+                elif (line.split()[0:2] in duplicated_pair) and ( duplicated_set[ duplicated_pair.index( line.split()[0:2] ) ][1] == 0 ):
+                    out = line.split()
+                    out[4] = duplicated_set[ duplicated_pair.index( line.split()[0:2] ) ][0]
+                    duplicated_set[ duplicated_pair.index( line.split()[0:2] ) ][1] = 1
+                    out_table.write( "\t".join(str(i) for i in out) + '\n')
+    out_table.close()
+    os.remove( table )
+
 """ Get sequences from some reference genome
 """
 def get_sequence(reference_genome, chromosome, start, end, strand="+"):
@@ -414,40 +465,30 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                         # Start mapping positions, at the specific base position
                         nuclease_position_counts = nuclease_ga[position]
                         control_position_counts = control_ga[position]
-                        ratio_nuclease_control_position_counts = math.log((1+nuclease_position_counts)/(1+control_position_counts), 2)
 
                         # In the narrow (parameter-specified) window
                         nuclease_window_counts = sum(nuclease_ga[window])
                         control_window_counts = sum(control_ga[window])
-                        ratio_nuclease_control_narrow_window_counts = math.log((1+nuclease_window_counts)/(1+control_window_counts), 2)
 
                         # In a 1kb window
                         nuclease_one_k_window_counts = sum(nuclease_ga[one_k_window])
                         control_one_k_window_counts = sum(control_ga[one_k_window])
-                        ratio_nuclease_control_one_k_window_counts = math.log((1+nuclease_one_k_window_counts)/(1+control_one_k_window_counts), 2)
 
                         # In a 10kb window
                         nuclease_ten_k_window_counts = sum(nuclease_ga[ten_k_window])
                         control_ten_k_window_counts = sum(control_ga[ten_k_window])
-                        ratio_nuclease_control_ten_k_window_counts = math.log((1+nuclease_ten_k_window_counts)/(1+control_ten_k_window_counts), 2)
-
-                        # The coverage (not start positions), may not use this directly
-                        nuclease_coverage = nuclease_ga_coverage[position]
-                        control_coverage = control_ga_coverage[position]
 
                         # A list of the outputs, that we will go through again to assign percentiles
                         row = [position.chrom, position.pos, nuclease_position_counts, control_position_counts,
                               nuclease_window_counts, control_window_counts, nuclease_one_k_window_counts, control_one_k_window_counts,
-                              nuclease_ten_k_window_counts, control_ten_k_window_counts, nuclease_coverage, control_coverage,
-                              ratio_nuclease_control_position_counts, ratio_nuclease_control_narrow_window_counts,
-                              ratio_nuclease_control_one_k_window_counts, ratio_nuclease_control_ten_k_window_counts]
+                              nuclease_ten_k_window_counts, control_ten_k_window_counts]
                         output_list.append(row)
 
                         # A list of the the various ratios that we will use to calculate the percentiles
-                        position_list.append(ratio_nuclease_control_position_counts)
-                        narrow_window_list.append(ratio_nuclease_control_narrow_window_counts)
-                        one_k_window_list.append(ratio_nuclease_control_one_k_window_counts)
-                        ten_k_window_list.append(ratio_nuclease_control_ten_k_window_counts)
+                        position_list.append(nuclease_position_counts)
+                        narrow_window_list.append(nuclease_window_counts)
+                        one_k_window_list.append(nuclease_one_k_window_counts)
+                        ten_k_window_list.append(nuclease_ten_k_window_counts)
 
             position_list_ranks = scipy.stats.rankdata(position_list)
             narrow_window_ranks = scipy.stats.rankdata(narrow_window_list)
@@ -463,11 +504,7 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
 
             print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads',
                 'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads', 'Nuclease_10k_Window_Reads', 'Control_10k_Window_Reads',
-                'Nuclease_Position_Coverage', 'Control_Position_Coverage',
-                'log2_Ratio_Nuclease_Control_Position', 'log2_Ratio_Nuclease_Control_Narrow_Window',
-                'log2_Ratio_Nuclease_Control_1k_Window', 'log2_Ratio_Nuclease_Control_10k_Window',
-                'Position_Ratio_Percentile', 'Narrow_Window_Ratio_Percentile',
-                '1k_Window_Ratio_Percentile', '10k_Window_Ratio_Percentile', file=o, sep='\t')
+                'Position_Percentile', 'Narrow_Window_Percentile', '1k_Window_Percentile', '10k_Window_Percentile', file=o, sep='\t')
 
             for idx, fields in enumerate(output_list):
                 position_percentile = position_list_percentiles[idx]
