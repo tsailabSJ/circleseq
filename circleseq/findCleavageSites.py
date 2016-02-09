@@ -235,15 +235,19 @@ def find_windows(ga_windows, window_size):
 def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_name, target_cells, bam_filename, read_threshold, outfile_base):
 
     # outfile_dirname, outfile_basename = os.path.split(outfile_base)
-    outfile_matched = '{0}_identified_matched.txt'.format(outfile_base)
     outfile_unmatched = '{0}_identified_unmatched.txt'.format(outfile_base)
 
     matched_output_table = collections.defaultdict(list)
-    #dictionary to storage read_count for each chromosome:start_position duple
-    reads_dict = {}
-    #dictionary to store the lines of outfile_matched
-    samples_dict = {}    
 
+    #dictionary to store the lines of outfile_matched
+    samples_dict = {}   
+    #dictionary to add read_count for each pair chromosome:start_position 
+    reads_dict = {}
+    #dictionary to store window_start. For duplicated off-target sites we will write the minimum of such positions 
+    window_min = {}
+    #dictionary to store window_end. For duplicated off-target sites we will write the maximum of such positions 
+    window_max = {}
+    
     with open(outfile_unmatched, 'w') as o2:
         for iv, value in ga_windows.steps():
             if value:
@@ -268,22 +272,24 @@ def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_
                         tag = iv.chrom+':'+str(target_start_absolute)
                         if tag not in reads_dict.keys():
                             reads_dict[tag] = read_count
+                            window_min[tag] = [iv.start]
+                            window_max[tag] = [iv.end]
                             samples_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom, iv.start, iv.end,
                                                           window_sequence, sequence, distance, length, filename, target_name, target_cells, full_name, target_sequence]
                         else:
                             reads_dict[tag] = reads_dict[tag] + read_count
-                            samples_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, reads_dict[tag], strand, iv, iv.chrom, iv.start, iv.end, 
+                            window_min[tag].append(iv.start)
+                            window_max[tag].append(iv.end)
+                            samples_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, reads_dict[tag], strand, iv, iv.chrom, min(window_min[tag]), max(window_max[tag]), 
                                                           window_sequence, sequence, distance, length, filename, target_name, target_cells, full_name, target_sequence]
                     else:
                         print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
                               iv.start, iv.end, window_sequence, sequence, distance, length, filename, target_name,
                               target_cells, full_name,  target_sequence, sep="\t", file=o2)
-    tags_sorted = samples_dict.keys()
-    tags_sorted.sort()
-    o1 = open(outfile_matched, 'w')
-    for key in tags_sorted:
-        print(*samples_dict[key], sep='\t', file=o1)
-    o1.close()
+                        
+    return samples_dict
+
+
 
 def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
@@ -368,6 +374,7 @@ def get_sequence(reference_genome, chromosome, start, end, strand="+"):
         seq = reference_genome[chromosome][int(start):int(end)].reverse.complement
     return str(seq)
 
+
 def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_threshold, start_threshold, name, cells, out, merged=True):
     output_folder = os.path.dirname(out)
     if not os.path.exists(output_folder):
@@ -384,20 +391,33 @@ def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_thresho
         ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, out)
     ga_consolidated_windows = find_windows(ga_windows, windowsize)
     print("\nGet consolidated windows.", file=sys.stderr)
-    output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, reads, out)
+
+    samples_dict = output_alignments(ga, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam, reads, out)
+    tags_sorted = samples_dict.keys()
+    tags_sorted.sort()
+    outfile_matched = '{0}_identified_matched.txt'.format(out)
+    o1 = open(outfile_matched, 'w')
+    for key in tags_sorted:
+        print(*samples_dict[key], sep='\t', file=o1)
+    o1.close()
     print("Get alignments.", file=sys.stderr)
+
 
 def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, gap_threshold, start_threshold, name, cells, out, merged=True):
 
     output_list = list()
-    position_list = list()
-    narrow_window_list = list()
-    one_k_window_list = list()
-    ten_k_window_list = list()
+##    position_list = list()
+##    narrow_window_list = list()
+##    one_k_window_list = list()
+##    ten_k_window_list = list()
     reference_genome = pyfaidx.Fasta(ref)
     combined_ga = HTSeq.GenomicArray("auto", stranded=False) # GenomicArray to store the union of control and nuclease positions
     offtarget_ga_windows = HTSeq.GenomicArray("auto", stranded=False) # GenomicArray to store potential off-target sites
-    bg_list = [] # List to store nuclease_position_counts of those that were observed at least once
+
+    bg_position = list() # List to store nuclease_position_counts that were observed at least once
+    bg_narrow = list() # List to store the sum of nuclease_position_counts in the narrow window
+    bg_one_k = list() # List to store the sum of nuclease_position_counts in the one_k window
+    bg_ten_k = list() # List to store the sum of nuclease_position_counts in the ten_k window
 
     output_folder = os.path.dirname(out)
     if not os.path.exists(output_folder):
@@ -433,22 +453,30 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                         # Start mapping positions, at the specific base position
                         nuclease_position_counts = nuclease_ga[position]
                         control_position_counts = control_ga[position]
-
                         # Store control_position_counts for which it was observed at least one read
                         if control_position_counts > 0:
-                            bg_list = bg_list + [control_position_counts]
+                            bg_position.append(control_position_counts)
 
                         # In the narrow (parameter-specified) window
                         nuclease_window_counts = sum(nuclease_ga[window])
                         control_window_counts = sum(control_ga[window])
+                        # Store control_window_counts greater than zero
+                        if control_window_counts > 0:
+                            bg_narrow.append(control_window_counts)
 
                         # In a 1kb window
                         nuclease_one_k_window_counts = sum(nuclease_ga[one_k_window])
                         control_one_k_window_counts = sum(control_ga[one_k_window])
+                        # Store control_one_k_window_counts greater than zero
+                        if control_one_k_window_counts > 0:
+                            bg_one_k.append(control_one_k_window_counts)                       
 
                         # In a 10kb window
                         nuclease_ten_k_window_counts = sum(nuclease_ga[ten_k_window])
                         control_ten_k_window_counts = sum(control_ga[ten_k_window])
+                        # Store control_one_k_window_counts greater than zero
+                        if control_ten_k_window_counts > 0:
+                            bg_ten_k.append(control_ten_k_window_counts)                       
 
                         # A list of the outputs, that we will go through again to assign percentiles
                         row = [position.chrom, position.pos, nuclease_position_counts, control_position_counts,
@@ -456,44 +484,76 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                               nuclease_ten_k_window_counts, control_ten_k_window_counts]
                         output_list.append(row)
 
-                        # A list of the the various ratios that we will use to calculate the percentiles
-                        position_list.append(nuclease_position_counts)
-                        narrow_window_list.append(nuclease_window_counts)
-                        one_k_window_list.append(nuclease_one_k_window_counts)
-                        ten_k_window_list.append(nuclease_ten_k_window_counts)
 
-            position_list_ranks = scipy.stats.rankdata(position_list)
-            narrow_window_ranks = scipy.stats.rankdata(narrow_window_list)
-            one_k_window_ranks = scipy.stats.rankdata(one_k_window_list)
-            ten_k_window_ranks = scipy.stats.rankdata(ten_k_window_list)
-
-            number_positions = len(position_list)
-
-            position_list_percentiles = [ x / number_positions * 100 for x in position_list_ranks]
-            narrow_window_list_percentiles = [ x / number_positions * 100 for x in narrow_window_ranks]
-            one_k_window_list_percentiles = [ x / number_positions * 100 for x in one_k_window_ranks]
-            ten_k_window_list_percentiles = [ x / number_positions * 100 for x in ten_k_window_ranks]
-
-            print('#Chromosome', '0-based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads',
+            print('#Chromosome', 'zero_based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads',
                 'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads', 'Nuclease_10k_Window_Reads', 'Control_10k_Window_Reads',
-                'p_Value', 'Position_Percentile', 'Narrow_Window_Percentile', '1k_Window_Percentile', '10k_Window_Percentile', file=o, sep='\t')
+                'p_Value', 'narrow_p_Value','one_k_p_Value', 'ten_k_p_Value', file=o, sep='\t')
 
+ 
             # scale (i.e. mean) of  the exponential distribution 
-            expon_mean = scipy.mean(bg_list)
+            position_expon_mean = scipy.mean(bg_position)
+            narrow_expon_mean = scipy.mean(bg_narrow)
+            one_k_expon_mean = scipy.mean(bg_one_k)
+            ten_k_expon_mean = scipy.mean(bg_ten_k)
+
+
+            print("\nWritting matched table", file=sys.stderr)
+
+            # Object to store the p-values for every chromosome:position object
+            ga_pval = HTSeq.GenomicArray("auto", typecode='O', stranded=False)
 
             for idx, fields in enumerate(output_list):
-                p_val = 1 - scipy.stats.expon.cdf(fields[2], scale=expon_mean)
-                position_percentile = position_list_percentiles[idx]
-                narrow_window_percentile = narrow_window_list_percentiles[idx]
-                one_k_window_percentile = one_k_window_list_percentiles[idx]
-                ten_k_window_percentile = ten_k_window_list_percentiles[idx]
-                if narrow_window_percentile > 99 and one_k_window_percentile > 99:
+                position_p_val = 1 - scipy.stats.expon.cdf(fields[2], scale=position_expon_mean)
+                narrow_p_val = 1 - scipy.stats.expon.cdf(fields[4], scale=narrow_expon_mean)
+                one_k_p_val = 1 - scipy.stats.expon.cdf(fields[6], scale=one_k_expon_mean)
+                ten_k_p_val = 1 - scipy.stats.expon.cdf(fields[8], scale=ten_k_expon_mean)
+                
+                if narrow_p_val<0.01 and one_k_p_val<0.01:
                     read_chr = fields[0]
                     read_position = fields[1]
                     offtarget_ga_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = 1
-                print(*(fields + [p_val, position_percentile, narrow_window_percentile, one_k_window_percentile, ten_k_window_percentile]), file=o, sep='\t')
+                    
+                print(*(fields + [position_p_val, narrow_p_val, one_k_p_val, ten_k_p_val]), file=o, sep='\t')
 
-            output_alignments(nuclease_ga, offtarget_ga_windows, reference_genome, targetsite, name, cells, bam, reads, out)
+
+                chr_pos = HTSeq.GenomicPosition(fields[0], int(fields[1]), '.')
+                ga_pval[chr_pos] = [position_p_val, narrow_p_val, one_k_p_val, ten_k_p_val]
+                                                
+
+            samples_dict = output_alignments(nuclease_ga, offtarget_ga_windows, reference_genome, targetsite, name, cells, bam, reads, out)
+            
+            tags_sorted = samples_dict.keys()
+            tags_sorted.sort()
+            outfile_matched = '{0}_identified_matched.txt'.format(out)
+            o1 = open(outfile_matched, 'w')
+            for key in tags_sorted:
+
+                row = samples_dict[key]
+                print(row, file=sys.stderr)
+                
+                pos_pval_list = list()
+                nar_pval_list = list()
+                one_pval_list = list()
+                ten_pval_list = list()
+                
+                iv_pval = HTSeq.GenomicInterval(row[0], int(row[1]), int(row[2]), '.')
+                for interval,value in ga_pval[iv_pval].steps():
+                    if value is not None:
+                        pos_pval_list.append(value[0])
+                        nar_pval_list.append(value[1])
+                        one_pval_list.append(value[2])
+                        ten_pval_list.append(value[3])
+
+                pval_pos = min(pos_pval_list)
+                pval_nar = min(nar_pval_list)
+                pval_one = min(one_pval_list)
+                pval_ten = min(ten_pval_list)                        
+                    
+
+                print(*(row + [pval_pos, pval_nar, pval_one, pval_ten]), sep='\t', file=o1)
+            o1.close()
+            
+            
 
 def main():
     parser = argparse.ArgumentParser(description='Identify off-target candidates from Illumina short read sequencing data.')
