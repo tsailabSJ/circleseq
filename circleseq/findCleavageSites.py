@@ -13,6 +13,8 @@ import pyfaidx
 import regex
 import string
 import scipy.stats
+import numpy
+import statsmodels
 import sys
 import itertools
 
@@ -357,6 +359,8 @@ def alignSequences(targetsite_sequence, window_sequence, max_errors=6):
         start = alignment.start()
         end = alignment.end()
 
+
+
         if length != len(targetsite_sequence):
             path = os.path.dirname(os.path.abspath(__file__))
             realigned_match_sequence, realigned_target = nw.global_align(match_sequence, targetsite_sequence,
@@ -406,10 +410,7 @@ def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_thresho
 def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, gap_threshold, start_threshold, name, cells, out, merged=True):
 
     output_list = list()
-##    position_list = list()
-##    narrow_window_list = list()
-##    one_k_window_list = list()
-##    ten_k_window_list = list()
+
     reference_genome = pyfaidx.Fasta(ref)
     combined_ga = HTSeq.GenomicArray("auto", stranded=False) # GenomicArray to store the union of control and nuclease positions
     offtarget_ga_windows = HTSeq.GenomicArray("auto", stranded=False) # GenomicArray to store potential off-target sites
@@ -417,7 +418,7 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
     bg_position = list() # List to store nuclease_position_counts that were observed at least once
     bg_narrow = list() # List to store the sum of nuclease_position_counts in the narrow window
     bg_one_k = list() # List to store the sum of nuclease_position_counts in the one_k window
-    bg_ten_k = list() # List to store the sum of nuclease_position_counts in the ten_k window
+##    bg_ten_k = list() # List to store the sum of nuclease_position_counts in the ten_k window
 
     output_folder = os.path.dirname(out)
     if not os.path.exists(output_folder):
@@ -471,31 +472,23 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                         if control_one_k_window_counts > 0:
                             bg_one_k.append(control_one_k_window_counts)                       
 
-                        # In a 10kb window
-                        nuclease_ten_k_window_counts = sum(nuclease_ga[ten_k_window])
-                        control_ten_k_window_counts = sum(control_ga[ten_k_window])
-                        # Store control_one_k_window_counts greater than zero
-                        if control_ten_k_window_counts > 0:
-                            bg_ten_k.append(control_ten_k_window_counts)                       
 
                         # A list of the outputs, that we will go through again to assign percentiles
                         row = [position.chrom, position.pos, nuclease_position_counts, control_position_counts,
-                              nuclease_window_counts, control_window_counts, nuclease_one_k_window_counts, control_one_k_window_counts,
-                              nuclease_ten_k_window_counts, control_ten_k_window_counts]
+                              nuclease_window_counts, control_window_counts, nuclease_one_k_window_counts, control_one_k_window_counts]
                         output_list.append(row)
 
 
-            print('#Chromosome', 'zero_based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads', 'Nuclease_Window_Reads', 'Control_Window_Reads',
-                'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads', 'Nuclease_10k_Window_Reads', 'Control_10k_Window_Reads',
-                'p_Value', 'narrow_p_Value','one_k_p_Value', 'ten_k_p_Value', file=o, sep='\t')
+            print('#Chromosome', 'zero_based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads',
+                  'Nuclease_Window_Reads', 'Control_Window_Reads',
+                  'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads',
+                  'p_Value', 'narrow_p_Value','one_k_p_Value', 'control_p_Value', 'control_narrow_p_Value','control_one_k_p_Value', file=o, sep='\t')
 
- 
-            # scale (i.e. mean) of  the exponential distribution 
-            position_expon_mean = scipy.mean(bg_position)
-            narrow_expon_mean = scipy.mean(bg_narrow)
-            one_k_expon_mean = scipy.mean(bg_one_k)
-            ten_k_expon_mean = scipy.mean(bg_ten_k)
 
+            ecdf_pos = statsmodels.distributions.empirical_distribution.ECDF(bg_position)
+            ecdf_nar = statsmodels.distributions.empirical_distribution.ECDF(bg_narrow)
+            ecdf_one = statsmodels.distributions.empirical_distribution.ECDF(bg_one_k)
+        
 
             print("\nWritting matched table", file=sys.stderr)
 
@@ -503,21 +496,26 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
             ga_pval = HTSeq.GenomicArray("auto", typecode='O', stranded=False)
 
             for idx, fields in enumerate(output_list):
-                position_p_val = 1 - scipy.stats.expon.cdf(fields[2], scale=position_expon_mean)
-                narrow_p_val = 1 - scipy.stats.expon.cdf(fields[4], scale=narrow_expon_mean)
-                one_k_p_val = 1 - scipy.stats.expon.cdf(fields[6], scale=one_k_expon_mean)
-                ten_k_p_val = 1 - scipy.stats.expon.cdf(fields[8], scale=ten_k_expon_mean)
                 
-                if narrow_p_val<0.01 and one_k_p_val<0.01:
+                position_p_val = 1 - ecdf_pos(fields[2])   
+                narrow_p_val = 1 - ecdf_nar(fields[4])     
+                one_k_p_val = 1 - ecdf_one(fields[6])      
+
+                control_position_p_val = 1 - ecdf_pos(fields[3])   
+                control_narrow_p_val = 1 - ecdf_nar(fields[5])     
+                control_one_k_p_val = 1 - ecdf_one(fields[7])    
+
+                if narrow_p_val<0.05 or position_p_val<0.05:
+                        
                     read_chr = fields[0]
                     read_position = fields[1]
                     offtarget_ga_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = 1
                     
-                print(*(fields + [position_p_val, narrow_p_val, one_k_p_val, ten_k_p_val]), file=o, sep='\t')
+                print(*(fields + [position_p_val, narrow_p_val, one_k_p_val, control_position_p_val, control_narrow_p_val, control_one_k_p_val]), file=o, sep='\t')
 
 
                 chr_pos = HTSeq.GenomicPosition(fields[0], int(fields[1]), '.')
-                ga_pval[chr_pos] = [position_p_val, narrow_p_val, one_k_p_val, ten_k_p_val]
+                ga_pval[chr_pos] = [position_p_val, narrow_p_val, one_k_p_val, control_position_p_val, control_narrow_p_val, control_one_k_p_val]
                                                 
 
             samples_dict = output_alignments(nuclease_ga, offtarget_ga_windows, reference_genome, targetsite, name, cells, bam, reads, out)
@@ -528,29 +526,36 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
             o1 = open(outfile_matched, 'w')
             for key in tags_sorted:
 
-                row = samples_dict[key]
-                print(row, file=sys.stderr)
+                row = samples_dict[key]       
                 
                 pos_pval_list = list()
                 nar_pval_list = list()
                 one_pval_list = list()
-                ten_pval_list = list()
                 
+                control_pos_pval_list = list()
+                control_nar_pval_list = list()
+                control_one_pval_list = list()                
+                 
                 iv_pval = HTSeq.GenomicInterval(row[0], int(row[1]), int(row[2]), '.')
                 for interval,value in ga_pval[iv_pval].steps():
                     if value is not None:
                         pos_pval_list.append(value[0])
                         nar_pval_list.append(value[1])
                         one_pval_list.append(value[2])
-                        ten_pval_list.append(value[3])
+                        control_pos_pval_list.append(value[3])
+                        control_nar_pval_list.append(value[4])
+                        control_one_pval_list.append(value[5])
 
                 pval_pos = min(pos_pval_list)
                 pval_nar = min(nar_pval_list)
                 pval_one = min(one_pval_list)
-                pval_ten = min(ten_pval_list)                        
+                control_pval_pos = min(control_pos_pval_list)
+                control_pval_nar = min(control_nar_pval_list)
+                control_pval_one = min(control_one_pval_list)                
+                
                     
 
-                print(*(row + [pval_pos, pval_nar, pval_one, pval_ten]), sep='\t', file=o1)
+                print(*(row + [pval_pos, pval_nar, pval_one, control_pval_pos, control_pval_nar, control_pval_one]), sep='\t', file=o1)
             o1.close()
             
             
