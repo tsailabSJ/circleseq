@@ -176,15 +176,6 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, outfile_base)
                         second_read_position = second_read.iv.start_d
                         second_read_strand = second_read.iv.strand
 
-            # Only count pairs where they are on the same chromosome, originate from within 6 bp start positions,
-
-
-            # current_pair_position = [first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
-            # if first_read_chr == second_read_chr and first_read_chr in ref_chr and current_pair_position != last_pair_position and \
-            # ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 20)
-            # or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 20)):
-            # if current_pair_position != last_pair_position:
-
             if first_read_chr == second_read_chr and first_read_chr in ref_chr and \
             ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 20)
             or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 20)):
@@ -236,60 +227,63 @@ def find_windows(ga_windows, window_size):
 """
 def output_alignments(ga, ga_windows, reference_genome, target_sequence, target_name, target_cells, bam_filename, read_threshold, outfile_base):
 
-    # outfile_dirname, outfile_basename = os.path.split(outfile_base)
-    outfile_unmatched = '{0}_identified_unmatched.txt'.format(outfile_base)
+##    outfile_unmatched = '{0}_identified_unmatched.txt'.format(outfile_base)
 
-    matched_output_table = collections.defaultdict(list)
-
-    #dictionary to store the lines of outfile_matched
-    samples_dict = {}   
-    #dictionary to add read_count for each pair chromosome:start_position 
+    #dictionary to store the matched reads
+    matched_dict = {}   
+    #dictionary to add read_count for each pair chromosome:start_position among matched reads
     reads_dict = {}
-    #dictionary to store window_start. For duplicated off-target sites we will write the minimum of such positions 
+    #dictionary to store window_start. For duplicated matched off-target.
     window_min = {}
-    #dictionary to store window_end. For duplicated off-target sites we will write the maximum of such positions 
+    #dictionary to store window_end. For duplicated matched off-target.
     window_max = {}
+
+    #dictionary to store the unmatched reads
+    unmatched_dict = {}
     
-    with open(outfile_unmatched, 'w') as o2:
-        for iv, value in ga_windows.steps():
-            if value:
-                count = sum(list(ga[iv]))
-                if count >= read_threshold:
-                    window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
-                    sequence, distance, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, max_errors=6)
-                    if strand == "+":
-                        target_start_absolute = target_start_relative + iv.start - 20
-                        target_end_absolute = target_end_relative + iv.start - 20
-                    elif strand == "-":
-                        target_start_absolute = iv.end + 20 - target_end_relative
-                        target_end_absolute = iv.end + 20 - target_start_relative
-                    else:
-                        target_start_absolute = iv.start
-                        target_end_absolute = iv.end
-                    name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
-                    read_count = int(sum(list(ga[iv])))
-                    filename = os.path.basename(bam_filename)
-                    full_name = target_name + '_' + target_cells + '_' + name + '_' + str(read_count)
-                    if sequence:
-                        tag = iv.chrom+':'+str(target_start_absolute)
-                        if tag not in reads_dict.keys():
-                            reads_dict[tag] = read_count
-                            window_min[tag] = [iv.start]
-                            window_max[tag] = [iv.end]
-                            samples_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom, iv.start, iv.end,
-                                                          window_sequence, sequence, distance, length, filename, target_name, target_cells, full_name, target_sequence]
-                        else:
-                            reads_dict[tag] = reads_dict[tag] + read_count
-                            window_min[tag].append(iv.start)
-                            window_max[tag].append(iv.end)
-                            samples_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, reads_dict[tag], strand, iv, iv.chrom, min(window_min[tag]), max(window_max[tag]), 
-                                                          window_sequence, sequence, distance, length, filename, target_name, target_cells, full_name, target_sequence]
-                    else:
-                        print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
-                              iv.start, iv.end, window_sequence, sequence, distance, length, filename, target_name,
-                              target_cells, full_name,  target_sequence, sep="\t", file=o2)
+##    with open(outfile_unmatched, 'w') as o2:
+    for iv, value in ga_windows.steps():
+        if value:
+            count = sum(list(ga[iv]))
+            window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
+            sequence, distance, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, max_errors=6)
+            if strand == "+":
+                target_start_absolute = target_start_relative + iv.start - 20
+                target_end_absolute = target_end_relative + iv.start - 20
+            elif strand == "-":
+                target_start_absolute = iv.end + 20 - target_end_relative
+                target_end_absolute = iv.end + 20 - target_start_relative
+            else:
+                target_start_absolute = iv.start
+                target_end_absolute = iv.end
+            name = iv.chrom +':'+ str(target_start_absolute) + '-' + str(target_end_absolute)
+            read_count = int(sum(list(ga[iv])))
+            filename = os.path.basename(bam_filename)
+            full_name = target_name + '_' + target_cells + '_' + name + '_' + str(read_count)
+            
+            if sequence:
+                tag = iv.chrom+':'+str(target_start_absolute)
+                if tag not in reads_dict.keys():
+                    reads_dict[tag] = read_count
+                    window_min[tag] = [iv.start]
+                    window_max[tag] = [iv.end]
+                    matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom, iv.start, iv.end,
+                                                  window_sequence, sequence, distance, length, filename, target_name, target_cells, full_name, target_sequence]
+                else:
+                    reads_dict[tag] = reads_dict[tag] + read_count
+                    window_min[tag].append(iv.start)
+                    window_max[tag].append(iv.end)
+                    matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, reads_dict[tag], strand, iv, iv.chrom, min(window_min[tag]), max(window_max[tag]), 
+                                                  window_sequence, sequence, distance, length, filename, target_name, target_cells, full_name, target_sequence]
+            else:
+                untag = iv.chrom+':'+str(iv.start)
+                unmatched_dict[untag] = [iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom, iv.start, iv.end,
+                                                  window_sequence, sequence, distance, length, filename, target_name, target_cells, full_name, target_sequence]
+##                print(iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand, iv, iv.chrom,
+##                      iv.start, iv.end, window_sequence, sequence, distance, length, filename, target_name,
+##                      target_cells, full_name,  target_sequence, sep="\t", file=o2)
                         
-    return samples_dict
+    return matched_dict, unmatched_dict
 
 
 
@@ -361,13 +355,13 @@ def alignSequences(targetsite_sequence, window_sequence, max_errors=6):
 
 
 
-        if length != len(targetsite_sequence):
-            path = os.path.dirname(os.path.abspath(__file__))
-            realigned_match_sequence, realigned_target = nw.global_align(match_sequence, targetsite_sequence,
-                                                                         gap_open=-10, gap_extend=-100, matrix='{0}/NUC_SIMPLE'.format(path))
-            return [realigned_match_sequence, distance, length, strand, start, end]
-        else:
-            return [match_sequence, distance, length, strand, start, end]
+##        if length != len(targetsite_sequence):
+        path = os.path.dirname(os.path.abspath(__file__))
+        realigned_match_sequence, realigned_target = nw.global_align(match_sequence, targetsite_sequence,
+                                                                     gap_open=-10, gap_extend=-100, matrix='{0}/NUC_SIMPLE'.format(path))
+        return [realigned_match_sequence, distance, length, strand, start, end]
+##        else:
+##            return [match_sequence, distance, length, strand, start, end]
 
 """ Get sequences from some reference genome
 """
@@ -418,7 +412,6 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
     bg_position = list() # List to store nuclease_position_counts that were observed at least once
     bg_narrow = list() # List to store the sum of nuclease_position_counts in the narrow window
     bg_one_k = list() # List to store the sum of nuclease_position_counts in the one_k window
-##    bg_ten_k = list() # List to store the sum of nuclease_position_counts in the ten_k window
 
     output_folder = os.path.dirname(out)
     if not os.path.exists(output_folder):
@@ -472,8 +465,7 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                         if control_one_k_window_counts > 0:
                             bg_one_k.append(control_one_k_window_counts)                       
 
-
-                        # A list of the outputs, that we will go through again to assign percentiles
+                        # A list of the outputs
                         row = [position.chrom, position.pos, nuclease_position_counts, control_position_counts,
                               nuclease_window_counts, control_window_counts, nuclease_one_k_window_counts, control_one_k_window_counts]
                         output_list.append(row)
@@ -488,11 +480,8 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
             ecdf_pos = statsmodels.distributions.empirical_distribution.ECDF(bg_position)
             ecdf_nar = statsmodels.distributions.empirical_distribution.ECDF(bg_narrow)
             ecdf_one = statsmodels.distributions.empirical_distribution.ECDF(bg_one_k)
-        
 
-            print("\nWritting matched table", file=sys.stderr)
-
-            # Object to store the p-values for every chromosome:position object
+            # Genomic array to store the p-values for every chromosome:position object
             ga_pval = HTSeq.GenomicArray("auto", typecode='O', stranded=False)
 
             for idx, fields in enumerate(output_list):
@@ -506,7 +495,6 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                 control_one_k_p_val = 1 - ecdf_one(fields[7])    
 
                 if narrow_p_val<0.05 or position_p_val<0.05:
-                        
                     read_chr = fields[0]
                     read_position = fields[1]
                     offtarget_ga_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = 1
@@ -518,24 +506,24 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                 ga_pval[chr_pos] = [position_p_val, narrow_p_val, one_k_p_val, control_position_p_val, control_narrow_p_val, control_one_k_p_val]
                                                 
 
-            samples_dict = output_alignments(nuclease_ga, offtarget_ga_windows, reference_genome, targetsite, name, cells, bam, reads, out)
-            
+            samples_dict, unsamples_dict = output_alignments(nuclease_ga, offtarget_ga_windows, reference_genome, targetsite, name, cells, bam, reads, out)
+
+            print("\nWritting matched table", file=sys.stderr)
             tags_sorted = samples_dict.keys()
             tags_sorted.sort()
             outfile_matched = '{0}_identified_matched.txt'.format(out)
-            o1 = open(outfile_matched, 'w')
-            for key in tags_sorted:
+            o1 = open(outfile_matched, 'w')         
 
+            for key in tags_sorted:
                 row = samples_dict[key]       
                 
                 pos_pval_list = list()
                 nar_pval_list = list()
                 one_pval_list = list()
-                
                 control_pos_pval_list = list()
                 control_nar_pval_list = list()
-                control_one_pval_list = list()                
-                 
+                control_one_pval_list = list()
+                
                 iv_pval = HTSeq.GenomicInterval(row[0], int(row[1]), int(row[2]), '.')
                 for interval,value in ga_pval[iv_pval].steps():
                     if value is not None:
@@ -551,12 +539,46 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                 pval_one = min(one_pval_list)
                 control_pval_pos = min(control_pos_pval_list)
                 control_pval_nar = min(control_nar_pval_list)
-                control_pval_one = min(control_one_pval_list)                
-                
-                    
+                control_pval_one = min(control_one_pval_list)                 
 
                 print(*(row + [pval_pos, pval_nar, pval_one, control_pval_pos, control_pval_nar, control_pval_one]), sep='\t', file=o1)
             o1.close()
+
+            print("\nWritting unmatched table", file=sys.stderr)
+            untags_sorted = unsamples_dict.keys()
+            untags_sorted.sort()
+            outfile_unmatched = '{0}_identified_unmatched.txt'.format(out)
+            o2 = open(outfile_unmatched, 'w')
+
+            for unkey in untags_sorted:
+                unrow = unsamples_dict[unkey]       
+                
+                un_pos_pval_list = list()
+                un_nar_pval_list = list()
+                un_one_pval_list = list()
+                un_control_pos_pval_list = list()
+                un_control_nar_pval_list = list()
+                un_control_one_pval_list = list()
+                
+                iv_pval = HTSeq.GenomicInterval(unrow[0], int(unrow[1]), int(unrow[2]), '.')
+                for interval,value in ga_pval[iv_pval].steps():
+                    if value is not None:
+                        un_pos_pval_list.append(value[0])
+                        un_nar_pval_list.append(value[1])
+                        un_one_pval_list.append(value[2])
+                        un_control_pos_pval_list.append(value[3])
+                        un_control_nar_pval_list.append(value[4])
+                        un_control_one_pval_list.append(value[5])
+
+                un_pval_pos = min(un_pos_pval_list)
+                un_pval_nar = min(un_nar_pval_list)
+                un_pval_one = min(un_one_pval_list)
+                un_control_pval_pos = min(un_control_pos_pval_list)
+                un_control_pval_nar = min(un_control_nar_pval_list)
+                un_control_pval_one = min(un_control_one_pval_list)                 
+
+                print(*(unrow + [un_pval_pos, un_pval_nar, un_pval_one, un_control_pval_pos, un_control_pval_nar, un_control_pval_one]), sep='\t', file=o2)
+            o2.close()
             
             
 
@@ -575,7 +597,6 @@ def main():
     parser.add_argument('--name', help='Targetsite Name', required=False)
     parser.add_argument('--cells', help='Cells', required=False)
     parser.add_argument('--out', help='Output file base', required=True)
-
     args = parser.parse_args()
 
     # Run the comparison if the control bam is specified, otherwise run the standard site identification routine.
