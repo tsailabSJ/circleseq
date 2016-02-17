@@ -80,7 +80,7 @@ def main():
     # matches = regex.findall(pattern, windowsequence)
 
 
-    match = nw.global_align('CATCCAAGCAGAAGAAGAAGAG', 'GAGTCCGAGCAGAAGAAGAANGG', gap_open=-10, gap_extend=-100, matrix='NUC_SIMPLE')
+    match = nw.global_align('GAATCCAAGCAGAAGAAGAGAAGG', 'GAGTCCGAGCAGAAGAAGAANGG', gap_open=-10, gap_extend=-100, matrix='NUC_SIMPLE')
 
     print(match)
 

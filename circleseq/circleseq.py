@@ -122,9 +122,10 @@ class CircleSeq:
         try:
             for sample in self.samples:
                 sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '.bam')
+                control_sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '.bam')
                 identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample)
                 logger.info('Reads: {0}, Window: {1}, MAPQ: {2}, Gap: {3}, Start {4}'.format(self.read_threshold, self.window_size, self.mapq_threshold, self.gap_threshold, self.start_threshold))
-                findCleavageSites.analyze(self.reference_genome, sorted_bam_file, self.samples[sample]['target'],
+                findCleavageSites.compare(self.reference_genome, sorted_bam_file, control_sorted_bam_file, self.samples[sample]['target'],
                                           self.read_threshold, self.window_size, self.mapq_threshold, self.gap_threshold,
                                           self.start_threshold, sample, self.samples[sample]['description'], identified_sites_file, merged=True)
         except Exception as e:
