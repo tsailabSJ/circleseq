@@ -285,6 +285,7 @@ def reverseComplement(sequence):
     return sequence.translate(transtab)[::-1]
 
 def regexFromSequence(seq, lookahead=True, indels=1, errors=6):
+    seq = seq.upper()
     """
     Given a sequence with ambiguous base characters, returns a regex that matches for
     the explicit (unambiguous) base characters
@@ -307,7 +308,7 @@ def regexFromSequence(seq, lookahead=True, indels=1, errors=6):
     if lookahead:
         pattern = '(?:' + pattern + ')'
     if errors > 0:
-        pattern = pattern + '{{i<={0},d<={0},s<={1},2i+2d+1s<={1}}}'.format(indels, errors)
+        pattern = pattern + '{{i<={0},d<={0},s<={1},3i+3d+1s<={1}}}'.format(indels, errors)
     return pattern
 
 """
@@ -315,6 +316,7 @@ Given a targetsite and window, use a fuzzy regex to align the targetsite to
 the window. Returns the best match.
 """
 def alignSequences(targetsite_sequence, window_sequence, max_errors=6):
+    window_sequence = window_sequence.upper()
     # Try both strands
     query_regex = regexFromSequence(targetsite_sequence, errors=max_errors)
     forward_alignment = regex.search(query_regex, window_sequence, regex.BESTMATCH)
