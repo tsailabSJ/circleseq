@@ -1,4 +1,4 @@
-reference_genome: /Users/shengdar/genomes/Homo_sapiens_assembly19.fasta
+reference_genome: /Volumes/JOUNG/genomes/Homo_sapiens_assembly19.fasta
 analysis_folder: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/output
 
 bwa: bwa
