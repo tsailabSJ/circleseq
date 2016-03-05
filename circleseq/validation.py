@@ -82,7 +82,10 @@ def checkIfValidSamples(samples):
 
     for sample in samples:
         if 'read1' not in samples[sample] or 'read2' not in samples[sample]:
-            logger.error('forward and reverse must be specified for {0} sample'.format(sample))
+            logger.error('read1 and read2 must be specified for {0} sample'.format(sample))
+            sys.exit()
+        if 'controlread1' not in samples[sample] or 'controlread2' not in samples[sample]:
+            logger.error('controlread1 and controlread2 must be specified for {0} sample'.format(sample))
             sys.exit()
         if 'target' not in samples[sample]:
             logger.error('target sequence must be specified for {0} sample'.format(sample))

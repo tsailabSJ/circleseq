@@ -99,17 +99,30 @@ class CircleSeq:
         try:
             for sample in self.samples:
                 sample_merge_path = os.path.join(self.analysis_folder, 'fastq', sample + '_merged.fastq.gz')
+                control_sample_merge_path = os.path.join(self.analysis_folder, 'fastq', 'CONTROL_' + sample + '_merged.fastq.gz')
                 mergeReads(self.samples[sample]['read1'],
                            self.samples[sample]['read2'],
                            sample_merge_path)
+                mergeReads(self.samples[sample]['controlread1'],
+                           self.samples[sample]['controlread2'],
+                           control_sample_merge_path)
+
                 sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', sample + '.sam')
+                control_sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', 'CONTROL_' + sample + '.sam')
+
                 alignReads(self.BWA_path,
                            self.reference_genome,
                            sample_merge_path,
                            '',
                            sample_alignment_path)
+                alignReads(self.BWA_path,
+                           self.reference_genome,
+                           sample_merge_path,
+                           '',
+                           control_sample_alignment_path)
+
                 self.merged[sample] = sample_alignment_path
-                logger.info('Finished merging reads.')
+                logger.info('Finished merging and aligning reads.')
 
         except Exception as e:
             logger.error('Error aligning')
@@ -212,7 +225,7 @@ def main():
     if args.command == 'all':
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
-        c.alignReads()
+        c.mergeAlignReads()
         c.findCleavageSites()
         c.visualize()
     elif args.command == 'parallel':

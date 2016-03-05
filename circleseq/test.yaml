@@ -1,17 +1,20 @@
-reference_genome: /Volumes/JOUNG/genomes/Homo_sapiens_assembly19.fasta
-analysis_folder: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/output
+reference_genome: /Users/shengdar/genomes/Homo_sapiens_assembly19.fasta
+analysis_folder: /Users/shengdar/Local/circleseq-test/
 
 bwa: bwa
 samtools: samtools
 
+read_threshold: 4
+window_size: 3
+mapq_threshold: 50
+start_threshold: 1
+gap_threshold: 3
+
 samples:
-    control:
+    U2OS_exp1_VEGFA_site_1:
         target: GGGTGGGGGGAGTTTGCTCCNGG
-        read1: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r1.fastq.gz
-        read2: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r2.fastq.gz
-        description: control
-    EMX1:
-        target: GGGTGGGGGGAGTTTGCTCCNGG
-        read1: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r1.fastq.gz
-        read2: /Users/shengdar/Dropbox/PycharmProjects/circleseq/test/undemux.r2.fastq.gz
-        description: EMX1
+        read1: /Users/shengdar/Local/circleseq-test/1_S1_subset_100000_R1.fastq
+        read2: /Users/shengdar/Local/circleseq-test/1_S1_subset_100000_R2.fastq
+        controlread1: /Users/shengdar/Local/circleseq-test/4_S4_subset_R1.fastq
+        controlread2: /Users/shengdar/Local/circleseq-test/4_S4_subset_R2.fastq
+        description: U2OS_exp1_VEGFA_site_1
