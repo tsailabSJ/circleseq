@@ -242,7 +242,7 @@ def output_alignments(ga, narrow_ga, ga_windows, reference_genome, target_sequen
     for iv,value in ga_windows.steps():
         if value:
             window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
-            sequence, distance, length, strand,  target_start_relative, target_end_relative = alignSequences(target_sequence, window_sequence, max_errors=6)
+            sequence, distance, length, strand,  target_start_relative, target_end_relative, realigned_target = alignSequences(target_sequence, window_sequence, max_errors=6)
             if strand == "+":
                 target_start_absolute = target_start_relative + iv.start - 20
                 target_end_absolute = target_end_relative + iv.start - 20
@@ -284,7 +284,7 @@ def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
     return sequence.translate(transtab)[::-1]
 
-def regexFromSequence(seq, lookahead=True, indels=1, errors=6):
+def regexFromSequence(seq, lookahead=True, indels=1, errors=7):
     seq = seq.upper()
     """
     Given a sequence with ambiguous base characters, returns a regex that matches for
@@ -306,55 +306,54 @@ def regexFromSequence(seq, lookahead=True, indels=1, errors=6):
         pattern += IUPAC_notation_regex[c]
 
     if lookahead:
-        pattern = '(?:' + pattern + ')'
-    if errors > 0:
-        pattern = pattern + '{{i<={0},d<={0},s<={1},3i+3d+1s<={1}}}'.format(indels, errors)
-    return pattern
+        pattern = '(?b:' + pattern + ')'
+
+    pattern_standard = pattern + '{{s<={0}}}'.format(errors)
+    pattern_gap = pattern + '{{i<={0},d<={0},s<={1},3i+3d+1s<={1}}}'.format(indels, errors)
+    return pattern_standard, pattern_gap
 
 """
 Given a targetsite and window, use a fuzzy regex to align the targetsite to
 the window. Returns the best match.
 """
-def alignSequences(targetsite_sequence, window_sequence, max_errors=6):
+def alignSequences(targetsite_sequence, window_sequence, max_errors=7):
     window_sequence = window_sequence.upper()
     # Try both strands
-    query_regex = regexFromSequence(targetsite_sequence, errors=max_errors)
-    forward_alignment = regex.search(query_regex, window_sequence, regex.BESTMATCH)
-    reverse_alignment = regex.search(query_regex, reverseComplement(window_sequence), regex.BESTMATCH)
+    query_regex_standard, query_regex_gap = regexFromSequence(targetsite_sequence, errors=max_errors)
 
-    if forward_alignment is None and reverse_alignment is None:
-        return ['', '', '', '', '', '']
-    else:
-        if forward_alignment is None and reverse_alignment is not None:
-            strand = '-'
-            alignment = reverse_alignment
-        elif reverse_alignment is None and forward_alignment is not None:
-            strand = '+'
-            alignment = forward_alignment
-        elif forward_alignment is not None and reverse_alignment is not None:
-            forward_distance = sum(forward_alignment.fuzzy_counts)
-            reverse_distance = sum(reverse_alignment.fuzzy_counts)
+    alignments = list()
+    alignments.append(('+', 'standard', regex.search(query_regex_standard, window_sequence, regex.BESTMATCH)))
+    alignments.append(('-', 'standard', regex.search(query_regex_standard, reverseComplement(window_sequence), regex.BESTMATCH)))
+    alignments.append(('+', 'gapped', regex.search(query_regex_gap, window_sequence, regex.BESTMATCH)))
+    alignments.append(('-', 'gapped', regex.search(query_regex_gap, reverseComplement(window_sequence), regex.BESTMATCH)))
 
-            if forward_distance > reverse_distance:
-                strand = '-'
-                alignment = reverse_alignment
-            else:
-                strand = '+'
-                alignment = forward_alignment
+    lowest_distance_score = 100
+    chosen_alignment = None
+    chosen_alignment_strand = None
+    for i, aln in enumerate(alignments):
+        strand, alignment_type, match = aln
+        if match != None:
+            substitutions, insertions, deletions = match.fuzzy_counts
+            distance_score = substitutions + (insertions + deletions) * 3
+            if distance_score < lowest_distance_score:
+                chosen_alignment = match
+                chosen_alignment_strand = strand
+                lowest_distance_score = distance_score
 
-        match_sequence = alignment.group()
-        distance = sum(alignment.fuzzy_counts)
+    if chosen_alignment:
+        match_sequence = chosen_alignment.group()
+        distance = sum(chosen_alignment.fuzzy_counts)
         length = len(match_sequence)
-        start = alignment.start()
-        end = alignment.end()
 
-##        if length != len(targetsite_sequence):
+        start = chosen_alignment.start()
+        end = chosen_alignment.end()
         path = os.path.dirname(os.path.abspath(__file__))
         realigned_match_sequence, realigned_target = nw.global_align(match_sequence, targetsite_sequence,
                                                                      gap_open=-10, gap_extend=-100, matrix='{0}/NUC_SIMPLE'.format(path))
-        return [realigned_match_sequence, distance, length, strand, start, end]
-##        else:
-##            return [match_sequence, distance, length, strand, start, end]
+        return [realigned_match_sequence, distance, length, chosen_alignment_strand, start, end, realigned_target]
+    else:
+        return [''] * 6 + ['none']
+
 
 """ Get sequences from some reference genome
 """
