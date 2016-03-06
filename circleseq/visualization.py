@@ -5,7 +5,7 @@ import os
 box_size = 15
 v_spacing = 3
 
-colors = {'G': '#F5F500', 'A': '#FF5454', 'T': '#00D118', 'C': '#26A8FF', 'N': '#B3B3B3', '-': '#FFFFFF'}
+colors = {'G': '#F5F500', 'A': '#FF5454', 'T': '#00D118', 'C': '#26A8FF', 'N': '#B3B3B3', '-': '#B3B3B3'}
 
 
 def parseSitesFile(infile):
