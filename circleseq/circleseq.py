@@ -99,7 +99,7 @@ class CircleSeq:
         try:
             for sample in self.samples:
                 sample_merge_path = os.path.join(self.analysis_folder, 'fastq', sample + '_merged.fastq.gz')
-                control_sample_merge_path = os.path.join(self.analysis_folder, 'fastq', 'CONTROL_' + sample + '_merged.fastq.gz')
+                control_sample_merge_path = os.path.join(self.analysis_folder, 'fastq', 'control_' + sample + '_merged.fastq.gz')
                 mergeReads(self.samples[sample]['read1'],
                            self.samples[sample]['read2'],
                            sample_merge_path)
@@ -108,7 +108,7 @@ class CircleSeq:
                            control_sample_merge_path)
 
                 sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', sample + '.sam')
-                control_sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', 'CONTROL_' + sample + '.sam')
+                control_sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '.sam')
 
                 alignReads(self.BWA_path,
                            self.reference_genome,
