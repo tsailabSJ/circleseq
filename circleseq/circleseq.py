@@ -115,9 +115,10 @@ class CircleSeq:
                            sample_merge_path,
                            '',
                            sample_alignment_path)
+
                 alignReads(self.BWA_path,
                            self.reference_genome,
-                           sample_merge_path,
+                           control_sample_merge_path,
                            '',
                            control_sample_alignment_path)
 
