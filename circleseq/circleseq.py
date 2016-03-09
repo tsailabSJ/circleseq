@@ -25,6 +25,7 @@ class CircleSeq:
         self.mapq_threshold = 0
         self.start_threshold = 1
         self.gap_threshold = 1
+        self.mismatch_threshold = 6
         self.merged_analysis = True
 
     def parseManifest(self, manifest_path, sample='all'):
@@ -52,7 +53,9 @@ class CircleSeq:
                 self.start_threshold = manifest_data['start_threshold']
             if 'gap_threshold' in manifest_data:
                 self.gap_threshold = manifest_data['gap_threshold']
-            if 'merged' in manifest_data:
+            if 'mismatch_threshold' in manifest_data:
+                self.mismatch_threshold = manifest_data['mismatch_threshold']
+            if 'merged_analysis' in manifest_data:
                 self.merged_analysis = manifest_data['merged_analysis']
 
             if sample == 'all':
@@ -71,77 +74,87 @@ class CircleSeq:
             sys.exit()
 
     def alignReads(self):
-        logger.info('Aligning reads...')
+        if self.merged_analysis:
+            logger.info('Merging reads...')
+            try:
+                self.merged = {}
+                for sample in self.samples:
+                    sample_merge_path = os.path.join(self.analysis_folder, 'fastq', sample + '_merged.fastq.gz')
+                    control_sample_merge_path = os.path.join(self.analysis_folder, 'fastq', 'control_' + sample + '_merged.fastq.gz')
+                    mergeReads(self.samples[sample]['read1'],
+                               self.samples[sample]['read2'],
+                               sample_merge_path)
+                    mergeReads(self.samples[sample]['controlread1'],
+                               self.samples[sample]['controlread2'],
+                               control_sample_merge_path)
 
-        try:
-            self.aligned = {}
-            self.aligned_sorted = {}
-            for sample in self.samples:
-                sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', sample + '.sam')
-                alignReads(self.BWA_path,
-                           self.reference_genome,
-                           self.samples[sample]['read1'],
-                           self.samples[sample]['read2'],
-                           sample_alignment_path)
-                self.aligned[sample] = sample_alignment_path
-                self.aligned_sorted[sample] = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
-                logger.info('Finished aligning reads to genome.')
+                    sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', sample + '.sam')
+                    control_sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '.sam')
 
-        except Exception as e:
-            logger.error('Error aligning')
-            logger.error(traceback.format_exc())
-            quit()
+                    alignReads(self.BWA_path,
+                               self.reference_genome,
+                               sample_merge_path,
+                               '',
+                               sample_alignment_path)
 
-    def mergeAlignReads(self):
-        logger.info('Merging reads...')
+                    alignReads(self.BWA_path,
+                               self.reference_genome,
+                               control_sample_merge_path,
+                               '',
+                               control_sample_alignment_path)
 
-        self.merged = {}
-        try:
-            for sample in self.samples:
-                sample_merge_path = os.path.join(self.analysis_folder, 'fastq', sample + '_merged.fastq.gz')
-                control_sample_merge_path = os.path.join(self.analysis_folder, 'fastq', 'control_' + sample + '_merged.fastq.gz')
-                mergeReads(self.samples[sample]['read1'],
-                           self.samples[sample]['read2'],
-                           sample_merge_path)
-                mergeReads(self.samples[sample]['controlread1'],
-                           self.samples[sample]['controlread2'],
-                           control_sample_merge_path)
+                    self.merged[sample] = sample_alignment_path
+                    logger.info('Finished merging and aligning reads.')
 
-                sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', sample + '.sam')
-                control_sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '.sam')
+            except Exception as e:
+                logger.error('Error aligning')
+                logger.error(traceback.format_exc())
+                quit()
+        else:
+            logger.info('Aligning reads...')
+            try:
+                self.aligned = {}
+                self.aligned_sorted = {}
+                for sample in self.samples:
+                    sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', sample + '.sam')
+                    control_sample_alignment_path = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '.sam')
+                    alignReads(self.BWA_path,
+                               self.reference_genome,
+                               self.samples[sample]['read1'],
+                               self.samples[sample]['read2'],
+                               sample_alignment_path)
+                    alignReads(self.BWA_path,
+                               self.reference_genome,
+                               self.samples[sample]['controlread1'],
+                               self.samples[sample]['controlread2'],
+                               control_sample_alignment_path)
+                    self.aligned[sample] = sample_alignment_path
+                    self.aligned_sorted[sample] = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
+                    logger.info('Finished aligning reads to genome.')
 
-                alignReads(self.BWA_path,
-                           self.reference_genome,
-                           sample_merge_path,
-                           '',
-                           sample_alignment_path)
-
-                alignReads(self.BWA_path,
-                           self.reference_genome,
-                           control_sample_merge_path,
-                           '',
-                           control_sample_alignment_path)
-
-                self.merged[sample] = sample_alignment_path
-                logger.info('Finished merging and aligning reads.')
-
-        except Exception as e:
-            logger.error('Error aligning')
-            logger.error(traceback.format_exc())
-            quit()
+            except Exception as e:
+                logger.error('Error aligning')
+                logger.error(traceback.format_exc())
+                quit()
 
     def findCleavageSites(self):
         logger.info('Identifying off-target cleavage sites.')
 
         try:
             for sample in self.samples:
-                sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '.bam')
-                control_sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '.bam')
+                if self.merged_analysis:
+                    sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '.bam')
+                    control_sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '.bam')
+                else:
+                    sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
+                    control_sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '_sorted.bam')
                 identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample)
-                logger.info('Reads: {0}, Window: {1}, MAPQ: {2}, Gap: {3}, Start {4}'.format(self.read_threshold, self.window_size, self.mapq_threshold, self.gap_threshold, self.start_threshold))
+                logger.info('Reads: {0}, Window: {1}, MAPQ: {2}, Gap: {3}, Start {4}, Mismatches {5}'.format(self.read_threshold,
+                     self.window_size, self.mapq_threshold, self.gap_threshold, self.start_threshold, self.mismatch_threshold))
                 findCleavageSites.compare(self.reference_genome, sorted_bam_file, control_sorted_bam_file, self.samples[sample]['target'],
                                           self.read_threshold, self.window_size, self.mapq_threshold, self.gap_threshold,
-                                          self.start_threshold, sample, self.samples[sample]['description'], identified_sites_file, merged=True)
+                                          self.start_threshold, self.mismatch_threshold, sample, self.samples[sample]['description'],
+                                          identified_sites_file, merged=self.merged_analysis)
         except Exception as e:
             logger.error('Error identifying off-target cleavage site.')
             logger.error(traceback.format_exc())
@@ -226,7 +239,8 @@ def main():
     if args.command == 'all':
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
-        c.mergeAlignReads()
+        c.alignReads()
+        # c.mergeAlignReads()
         c.findCleavageSites()
         c.visualize()
     elif args.command == 'parallel':
