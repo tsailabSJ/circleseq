@@ -604,7 +604,7 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
             control_narrow_p_val = 1 - ecdf_nar(fields[5])
             control_one_k_p_val = 1 - ecdf_one(fields[7])
 
-            if narrow_p_val<0.05 or position_p_val<0.05:
+            if narrow_p_val<0.01 or position_p_val<0.01:
                 read_chr = fields[0]
                 read_position = fields[1]
                 offtarget_ga_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = 1
