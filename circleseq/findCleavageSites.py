@@ -548,7 +548,7 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                     nuclease_position_counts = nuclease_ga[position]
                     control_position_counts = control_ga[position]
                     # Store control_position_counts for which it was observed at least one read
-                    if control_position_counts > 0:
+                    if control_position_counts >= 0:
                         bg_position.append(control_position_counts)
 
                     # In the narrow (parameter-specified) window
@@ -560,14 +560,14 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                     right_control_50bp_window_counts = sum(nuclease_ga[right_control_50bp_window])
 
                     # Store control_window_counts greater than zero
-                    if control_window_counts > 0:
+                    if control_window_counts >= 0:
                         bg_narrow.append(control_window_counts)
 
                     # In a 1kb window
                     nuclease_one_k_window_counts = sum(nuclease_ga[one_k_window])
                     control_one_k_window_counts = sum(control_ga[one_k_window])
                     # Store control_one_k_window_counts greater than zero
-                    if control_one_k_window_counts > 0:
+                    if control_one_k_window_counts >= 0:
                         bg_one_k.append(control_one_k_window_counts)
 
                     # A list of the outputs
