@@ -1,5 +1,5 @@
 reference_genome: /Users/shengdar/genomes/Homo_sapiens_assembly19.fasta
-analysis_folder: /Users/shengdar/Local/circleseq-test/standard
+analysis_folder: /Users/shengdar/Local/circleseq-test/merged
 
 bwa: bwa
 samtools: samtools
@@ -10,7 +10,7 @@ mapq_threshold: 50
 start_threshold: 1
 gap_threshold: 3
 mismatch_threshold: 6
-merged_analysis: False
+merged_analysis: True
 
 samples:
     U2OS_exp1_VEGFA_site_1:
