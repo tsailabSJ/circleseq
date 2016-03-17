@@ -167,8 +167,8 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
                         second_read_strand = second_read.iv.strand
 
             if first_read_chr == second_read_chr and first_read_chr in ref_chr and \
-            ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position - 1) <= 20)
-            or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position - 1) <= 20)):
+            ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position) <= gap_threshold)
+            or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position) <= gap_threshold)):
 
                 #if first_read_chr in ref_chr and first_read_position and first_read_strand:
                 ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1

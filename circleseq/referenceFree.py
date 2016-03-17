@@ -41,7 +41,7 @@ def analyze(fastq1_filename, fastq2_filename, targetsite, out_base, name='', cel
         r2_sequence = r2[1].rstrip('\n')
         joined_seq = reverseComplement(r1_sequence) + r2_sequence
         truncated_joined_seq = joined_seq[130:170]
-        offtarget, mismatch, length, strand, start, end = alignSequences(targetsite, truncated_joined_seq)
+        offtarget, mismatch, length, strand, start, end, realigned_target = alignSequences(targetsite, truncated_joined_seq)
         if offtarget:
             # print(read_count, offtarget,mismatch,length)
             c[offtarget] += 1
