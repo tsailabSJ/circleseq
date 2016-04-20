@@ -420,16 +420,21 @@ def alignSequences(targetsite_sequence, window_sequence, max_errors=7):
 
     if chosen_alignment:
         match_sequence = chosen_alignment.group()
+        match_substitutions, match_insertions, match_deletions = chosen_alignment.fuzzy_counts
         distance = sum(chosen_alignment.fuzzy_counts)
         length = len(match_sequence)
 
         start = chosen_alignment.start()
         end = chosen_alignment.end()
         path = os.path.dirname(os.path.abspath(__file__))
-        realigned_match_sequence, realigned_target = nw.global_align(match_sequence, targetsite_sequence,
+        if match_insertions or match_deletions:
+            realigned_match_sequence, realigned_target = nw.global_align(match_sequence, targetsite_sequence,
                                                                      gap_open=-10, gap_extend=-100,
                                                                      matrix='{0}/NUC_SIMPLE'.format(path))
-        return [realigned_match_sequence, distance, length, chosen_alignment_strand, start, end, realigned_target]
+            return [realigned_match_sequence, distance, length, chosen_alignment_strand, start, end, realigned_target]
+        else:
+            return [match_sequence, distance, length, chosen_alignment_strand, start, end, targetsite_sequence]
+
     else:
         return [''] * 6 + ['none']
 
