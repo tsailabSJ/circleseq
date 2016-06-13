@@ -31,6 +31,8 @@ Below is an example ``manifest.yaml`` file::
     mapq_threshold: 50
     start_threshold: 1
     gap_threshold: 3
+    mismatch_threshold: 6
+    merged_analysis: True
     
     samples:
         U2OS_exp1_VEGFA_site_1:
