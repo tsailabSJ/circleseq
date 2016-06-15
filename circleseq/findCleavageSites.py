@@ -247,7 +247,7 @@ def output_alignments(ga, narrow_ga, ga_windows, reference_genome, target_sequen
             name = iv.chrom +':'+ str(target_start_absolute) + '-' + str(target_end_absolute)
             read_count = int(max(set(narrow_ga[iv])))
             filename = os.path.basename(bam_filename)
-            full_name = target_name + '_' + target_cells + '_' + name + '_' + str(read_count)
+            full_name = str(target_name) + '_' + str(target_cells) + '_' + str(name) + '_' + str(read_count)
             if sequence:
                 tag = iv.chrom+':'+str(target_start_absolute)
                 if tag not in reads_dict.keys():
