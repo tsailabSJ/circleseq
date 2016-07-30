@@ -8,6 +8,7 @@ import pyfaidx
 import regex
 import string
 import statsmodels
+from statsmodels import distributions
 import sys
 
 
