@@ -7,8 +7,9 @@ import os
 import pyfaidx
 import regex
 import string
-import statsmodels
-from statsmodels import distributions
+# import statsmodels
+# from statsmodels import distributions
+from utility import ecdf
 import sys
 
 
@@ -591,9 +592,9 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
               'control_p_Value', 'control_narrow_p_Value','control_one_k_p_Value', file=o, sep='\t')
 
         # Empiricals cdf
-        ecdf_pos = statsmodels.distributions.empirical_distribution.ECDF(bg_position)
-        ecdf_nar = statsmodels.distributions.empirical_distribution.ECDF(bg_narrow)
-        ecdf_one = statsmodels.distributions.empirical_distribution.ECDF(bg_one_k)
+        # ecdf_pos = statsmodels.distributions.empirical_distribution.ECDF(bg_position)
+        # ecdf_nar = statsmodels.distributions.empirical_distribution.ECDF(bg_narrow)
+        # ecdf_one = statsmodels.distributions.empirical_distribution.ECDF(bg_one_k)
 
         # Genomic array to store the p-values for every chromosome:position object
         ga_pval = HTSeq.GenomicArray("auto", typecode='O', stranded=False)
@@ -602,13 +603,21 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
         scale_factor = total_control_count/float(total_nuclease_count)
 
         for idx, fields in enumerate(output_list):
-            position_p_val = 1 - ecdf_pos(fields[2]*scale_factor)
-            narrow_p_val = 1 - ecdf_nar(fields[4]*scale_factor)
-            one_k_p_val = 1 - ecdf_one(fields[6]*scale_factor)
+            # position_p_val = 1 - ecdf_pos(fields[2]*scale_factor)
+            # narrow_p_val = 1 - ecdf_nar(fields[4]*scale_factor)
+            # one_k_p_val = 1 - ecdf_one(fields[6]*scale_factor)
+            #
+            # control_position_p_val = 1 - ecdf_pos(fields[3])
+            # control_narrow_p_val = 1 - ecdf_nar(fields[5])
+            # control_one_k_p_val = 1 - ecdf_one(fields[7])
 
-            control_position_p_val = 1 - ecdf_pos(fields[3])
-            control_narrow_p_val = 1 - ecdf_nar(fields[5])
-            control_one_k_p_val = 1 - ecdf_one(fields[7])
+            position_p_val = 1 - ecdf(fields[2]*scale_factor)
+            narrow_p_val = 1 - ecdf(fields[4]*scale_factor)
+            one_k_p_val = 1 - ecdf(fields[6]*scale_factor)
+
+            control_position_p_val = 1 - ecdf(fields[3])
+            control_narrow_p_val = 1 - ecdf(fields[5])
+            control_one_k_p_val = 1 - ecdf(fields[7])
 
             if narrow_p_val<0.01 or position_p_val<0.01:
                 read_chr = fields[0]
