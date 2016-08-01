@@ -611,13 +611,13 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
             # control_narrow_p_val = 1 - ecdf_nar(fields[5])
             # control_one_k_p_val = 1 - ecdf_one(fields[7])
 
-            position_p_val = 1 - ecdf(fields[2]*scale_factor)
-            narrow_p_val = 1 - ecdf(fields[4]*scale_factor)
-            one_k_p_val = 1 - ecdf(fields[6]*scale_factor)
+            position_p_val = 1 - ecdf(bg_position, fields[2]*scale_factor)
+            narrow_p_val = 1 - ecdf(bg_narrow, fields[4]*scale_factor)
+            one_k_p_val = 1 - ecdf(bg_one_k, fields[6]*scale_factor)
 
-            control_position_p_val = 1 - ecdf(fields[3])
-            control_narrow_p_val = 1 - ecdf(fields[5])
-            control_one_k_p_val = 1 - ecdf(fields[7])
+            control_position_p_val = 1 - ecdf(bg_position, fields[3])
+            control_narrow_p_val = 1 - ecdf(bg_narrow, fields[5])
+            control_one_k_p_val = 1 - ecdf(bg_one_k, fields[7])
 
             if narrow_p_val<0.01 or position_p_val<0.01:
                 read_chr = fields[0]
