@@ -7,9 +7,7 @@ import os
 import pyfaidx
 import regex
 import string
-# import statsmodels
-# from statsmodels import distributions
-from utility import ecdf
+import statsmodels
 import sys
 
 
@@ -290,9 +288,6 @@ def output_alignments(ga, narrow_ga, ga_windows, reference_genome, target_sequen
             iv_pval = HTSeq.GenomicInterval(row[0], int(row[1]), int(row[2]), '.')
             for interval,value in ga_pval[iv_pval].steps():
                 if value is not None:
-                    # ns_pos_pval_list.append(value[1])
-                    # ns_nar_pval_list.append(value[3])
-                    # ns_one_pval_list.append(value[5])
                     pos_pval_list.append(value[0])
                     nar_pval_list.append(value[1])
                     one_pval_list.append(value[2])
@@ -300,9 +295,6 @@ def output_alignments(ga, narrow_ga, ga_windows, reference_genome, target_sequen
                     control_nar_pval_list.append(value[4])
                     control_one_pval_list.append(value[5])
 
-            # ns_pval_pos = min(ns_pos_pval_list)
-            # ns_pval_nar = min(ns_nar_pval_list)
-            # ns_pval_one = min(ns_one_pval_list)
             pval_pos = min(pos_pval_list)
             pval_nar = min(nar_pval_list)
             pval_one = min(one_pval_list)
@@ -329,20 +321,12 @@ def output_alignments(ga, narrow_ga, ga_windows, reference_genome, target_sequen
             iv_pval = HTSeq.GenomicInterval(unrow[0], int(unrow[1]), int(unrow[2]), '.')
             for interval,value in ga_pval[iv_pval].steps():
                 if value is not None:
-                    # un_ns_pos_pval_list.append(value[0])
-                    # un_ns_nar_pval_list.append(value[1])
-                    # un_ns_one_pval_list.append(value[2])
-
                     un_pos_pval_list.append(value[0])
                     un_nar_pval_list.append(value[1])
                     un_one_pval_list.append(value[2])
                     un_control_pos_pval_list.append(value[3])
                     un_control_nar_pval_list.append(value[4])
                     un_control_one_pval_list.append(value[5])
-
-            # un_ns_pval_pos = min(un_ns_pos_pval_list)
-            # un_ns_pval_nar = min(un_ns_nar_pval_list)
-            # un_ns_pval_one = min(un_ns_one_pval_list)
 
             un_pval_pos = min(un_pos_pval_list)
             un_pval_nar = min(un_nar_pval_list)
@@ -548,8 +532,6 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
 
                     one_k_window = HTSeq.GenomicInterval(position.chrom, max(0, position.pos - 500),
                                                          position.pos + windowsize + 500)
-                    # ten_k_window = HTSeq.GenomicInterval(position.chrom, max(0, position.pos - 5000),
-                    #                                      position.pos + windowsize + 5000)
 
                     # Start mapping positions, at the specific base position
                     nuclease_position_counts = nuclease_ga[position]
@@ -592,9 +574,9 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
               'control_p_Value', 'control_narrow_p_Value','control_one_k_p_Value', file=o, sep='\t')
 
         # Empiricals cdf
-        # ecdf_pos = statsmodels.distributions.empirical_distribution.ECDF(bg_position)
-        # ecdf_nar = statsmodels.distributions.empirical_distribution.ECDF(bg_narrow)
-        # ecdf_one = statsmodels.distributions.empirical_distribution.ECDF(bg_one_k)
+        ecdf_pos = statsmodels.distributions.empirical_distribution.ECDF(bg_position)
+        ecdf_nar = statsmodels.distributions.empirical_distribution.ECDF(bg_narrow)
+        ecdf_one = statsmodels.distributions.empirical_distribution.ECDF(bg_one_k)
 
         # Genomic array to store the p-values for every chromosome:position object
         ga_pval = HTSeq.GenomicArray("auto", typecode='O', stranded=False)
@@ -603,29 +585,19 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
         scale_factor = total_control_count/float(total_nuclease_count)
 
         for idx, fields in enumerate(output_list):
-            # position_p_val = 1 - ecdf_pos(fields[2]*scale_factor)
-            # narrow_p_val = 1 - ecdf_nar(fields[4]*scale_factor)
-            # one_k_p_val = 1 - ecdf_one(fields[6]*scale_factor)
-            #
-            # control_position_p_val = 1 - ecdf_pos(fields[3])
-            # control_narrow_p_val = 1 - ecdf_nar(fields[5])
-            # control_one_k_p_val = 1 - ecdf_one(fields[7])
+            position_p_val = 1 - ecdf_pos(fields[2]*scale_factor)
+            narrow_p_val = 1 - ecdf_nar(fields[4]*scale_factor)
+            one_k_p_val = 1 - ecdf_one(fields[6]*scale_factor)
 
-            position_p_val = 1 - ecdf(bg_position, fields[2]*scale_factor)
-            narrow_p_val = 1 - ecdf(bg_narrow, fields[4]*scale_factor)
-            one_k_p_val = 1 - ecdf(bg_one_k, fields[6]*scale_factor)
-
-            control_position_p_val = 1 - ecdf(bg_position, fields[3])
-            control_narrow_p_val = 1 - ecdf(bg_narrow, fields[5])
-            control_one_k_p_val = 1 - ecdf(bg_one_k, fields[7])
+            control_position_p_val = 1 - ecdf_pos(fields[3])
+            control_narrow_p_val = 1 - ecdf_nar(fields[5])
+            control_one_k_p_val = 1 - ecdf_one(fields[7])
 
             if narrow_p_val<0.01 or position_p_val<0.01:
                 read_chr = fields[0]
                 read_position = fields[1]
                 offtarget_ga_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = 1
                 ga_narrow_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = fields[4]
-                # ga_left_control_50bp_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = fields[8]
-                # ga_right_control_50bp_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = fields[9]
 
             print(*(fields + [position_p_val, narrow_p_val, one_k_p_val,
                   control_position_p_val, control_narrow_p_val, control_one_k_p_val]), file=o, sep='\t')

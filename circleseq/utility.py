@@ -23,6 +23,3 @@ def fq(file):
 def reverseComplement(sequence):
     transtab = string.maketrans("ACGT","TGCA")
     return sequence.translate(transtab)[::-1]
-
-def ecdf(l, t):
-    return len([x for x in l if x <= t])/float(len(l))
