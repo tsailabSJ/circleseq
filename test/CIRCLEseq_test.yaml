@@ -1,5 +1,5 @@
 reference_genome: input_data/CIRCLEseq_test_genome.fa
-analysis_folder: test_output
+analysis_folder: output_data
 
 bwa: bwa
 samtools: samtools
