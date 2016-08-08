@@ -1,0 +1,22 @@
+reference_genome: input_data/CIRCLEseq_test_genome.fa
+analysis_folder: test_output
+
+bwa: bwa
+samtools: samtools
+
+read_threshold: 4
+window_size: 3
+mapq_threshold: 50
+start_threshold: 1
+gap_threshold: 3
+mismatch_threshold: 6
+merged_analysis: True
+
+samples:
+    U2OS_EMX1:
+        target: GAGTCCGAGCAGAAGAAGAANGG
+        read1: input_data/EMX1.r1.fastq.gz
+        read2: input_data/EMX1.r2.fastq.gz
+        controlread1: input_data/EMX1_control.r1.fastq.gz
+        controlread2: input_data/EMX1_control.r2.fastq.gz
+        description: U2OS
