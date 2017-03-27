@@ -1,5 +1,6 @@
 *.py[cod]
 test/output
+.DS_Store
 
 # PyCharm Pref Folder
 .idea
