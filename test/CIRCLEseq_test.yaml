@@ -1,5 +1,5 @@
-reference_genome: input_data/CIRCLEseq_test_genome.fa
-analysis_folder: output_data
+reference_genome: data/input/CIRCLEseq_test_genome.fa
+analysis_folder: data/output
 
 bwa: bwa
 samtools: samtools
@@ -15,8 +15,8 @@ merged_analysis: True
 samples:
     U2OS_EMX1:
         target: GAGTCCGAGCAGAAGAAGAANGG
-        read1: input_data/EMX1.r1.fastq.gz
-        read2: input_data/EMX1.r2.fastq.gz
-        controlread1: input_data/EMX1_control.r1.fastq.gz
-        controlread2: input_data/EMX1_control.r2.fastq.gz
+        read1: data/input/EMX1.r1.fastq.gz
+        read2: data/input/EMX1.r2.fastq.gz
+        controlread1: data/input/EMX1_control.r1.fastq.gz
+        controlread2: data/input/EMX1_control.r2.fastq.gz
         description: U2OS
