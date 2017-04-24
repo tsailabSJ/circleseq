@@ -1,10 +1,9 @@
-CIRCLE-seq: Comprehensive In vitro Reporting of CLeavage Effects by Sequencing
-==================================================================================
+# CIRCLE-seq: Comprehensive In vitro Reporting of CLeavage Effects by Sequencing
+[![travis badge](https://travis-ci.org/tsaiSJ/circleseq.svg?branch=master)](https://travis-ci.org/tsaiSJ/circleseq)
 
 This is a repository for CIRCLE-seq analytical software, which takes sample-specific paired end FASTQ files as input and produces a list of CIRCLE-seq detected off-target cleavage sites as output.
 
-Dependencies
-=======
+## Dependencies
 
 * Python (2.7)
 * [bwa] alignment tool
@@ -13,10 +12,9 @@ Dependencies
 [bwa]: http://bio-bwa.sourceforge.net
 [samtools]: http://www.htslib.org
 
-**Usage**
-=========
+## Usage
 
-Using this tool is simple, just create a ``.yaml`` manifest file referencing the dependencies and sample ``.fastq.gz`` file paths. Then, run ``python /path/to/circleseq.py all --manifest /path/to/manifest.yaml``
+Using this tool is simple. After [getting set up](#getting_set_up) just create a ``.yaml`` manifest file referencing the dependencies and sample ``.fastq.gz`` file paths. Then, run ``python /path/to/circleseq.py all --manifest /path/to/manifest.yaml``
 
 Below is an example ``manifest.yaml`` file::
 
@@ -50,8 +48,7 @@ Below is an example ``manifest.yaml`` file::
             controlread2: /data/joung/sequencing_fastq/150902_M01326_0235_000000000-AHLT8/fastq/4_S4_L001_R2_001.fastq.gz
             description: U2OS_exp1
 
-**Getting Set Up**
-=========
+##Getting Set Up<a href="getting_set_up"></a>
 
 ### Install Dependencies<a name="install_dependencies"></a>
 
@@ -72,6 +69,31 @@ The circleseq package requires a reference genome for read mapping. You can use 
 Once all dependencies are installed, there are a few easy steps to download and set up the circleseq package:
 
 1. Obtain a copy of the circleseq package source code. You can either download and unzip the latest source from the github [release page](https://github.com/tsailabSJ/circleseq/releases), or you use git to clone the repository by running `git clone --recursive https://github.com/tsailabSJ/circleseq.git`
-2. Install guideseq dependencies by entering the circleseq directory and running `pip install -r requirements.txt`
+2. Install circleseq dependencies by entering the circleseq directory and running `pip install -r requirements.txt`
 
-Once all guideseq dependencies are installed, you will be ready to start using circleseq.
+Once all circleseq dependencies are installed, you will be ready to start using circleseq.
+
+
+## Testing the circleseq Package<a name="testing"></a>
+
+In the spirit of Test-Driven Development, we have written tests for the pipeline to protect against regression when making future updates. These can be used to ensure that the software is running with expected functionality.
+
+NOTE: Due to differences in sorting between different versions of the `bwa` package, you must be using `bwa v0.7.9a` for these tests to work. We also recommend that you use `bedtools v2.25.0` when running these tests for consistency's sake.
+
+### Single-Step Regression Tests<a name="regression_tests"></a>
+
+For ongoing testing and development, we have created an abridged set of input data and expected output data for each step of the pipeline. This way, changes to the pipeline can be quickly tested for feature regression.
+
+To run these tests, you must first install the `nose` testing Python package.
+
+```
+pip install nose
+```
+
+Then, from the circleseq root directory, simply run
+
+```
+nosetests
+```
+
+and the regression tests for each pipeline step will be run.
