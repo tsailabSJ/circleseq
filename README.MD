@@ -1,20 +1,67 @@
 # CIRCLE-seq: Comprehensive In vitro Reporting of CLeavage Effects by Sequencing
-[![travis badge](https://travis-ci.org/tsaiSJ/circleseq.svg?branch=master)](https://travis-ci.org/tsaiSJ/circleseq)
+[![travis badge](https://travis-ci.org/tsailabSJ/circleseq.svg?branch=master)](https://travis-ci.org/tsailabSJ/circleseq)
 
 This is a repository for CIRCLE-seq analytical software, which takes sample-specific paired end FASTQ files as input and produces a list of CIRCLE-seq detected off-target cleavage sites as output.
+
+## Table of Contents
+- [Features](#features)
+- [Dependencies](#dependencies)
+- [Getting Set Up](#setup)
+	- [Installing Dependencies](#install_dependencies)
+	- [Download Reference Genome](#reference_genome)
+	- [Download and Set Up guideseq](#circleseq_setup)
+- [Usage](#usage)
+	- [Quickstart](#quickstart)
+	- [Writing A Manifest File](#write_manifest)
+	- [Pipeline Outputs](#pipeline_output)
+- [Testing the guideseq Package](#testing)
+- [Frequently Asked Questions](#FAQ)
+
+## Features<a name="features"></a>
+
+This package implements a pipeline that takes in reads from the CIRCLE-seq assay and returns detected cleavage sites as output. The individual pipeline steps are:
+
+1. **Read Alignment**: Paired end reads from the assay are aligned to the reference genome using the BWA-MEM algorithm with default parameters (Li. H, 2009).
+2. **Merge**:
+3. **Cleavage Site Identification**: 
+4. **Visualize**:
 
 ## Dependencies
 
 * Python (2.7)
-* [bwa] alignment tool
-* [samtools] alignment format manipulation
+* [`bwa`](https://github.com/lh3/bwa) alignment tool
+* [`samtools`](http://www.htslib.org/download/) alignment format manipulation
 
-[bwa]: http://bio-bwa.sourceforge.net
-[samtools]: http://www.htslib.org
 
-## Usage
+##Getting Set Up<a href="setup"></a>
 
-Using this tool is simple. After [getting set up](#getting_set_up) just create a ``.yaml`` manifest file referencing the dependencies and sample ``.fastq.gz`` file paths. Then, run ``python /path/to/circleseq.py all --manifest /path/to/manifest.yaml``
+### Install Dependencies<a name="install_dependencies"></a>
+
+To run circleseq, you must first install all necessary dependencies:
+
+- **Python 2.7**: If a version does not come bundled with your operating system, we recommend the [Anaconda](https://www.continuum.io/downloads) scientific Python package.
+- **Burrows-Wheeler Aligner (bwa)**: You can either install bwa with a package manager (e.g. `brew` on OSX or `apt-get` on Ubuntu/Debian), or you can download it from the [project page](http://bio-bwa.sourceforge.net/) and compile it from source.
+- **Samtools**: You can either install samtools with a package manager (e.g. `brew` or `apt-get`), or you can download it from the [project page](http://www.htslib.org/download/) and compile it from source.
+
+For both bwa and samtools, make sure you know the path to the respective executables, as they need to be specified in the pipeline manifest file.
+
+### Download Reference Genome<a name="reference_genome"></a>
+
+The circleseq package requires a reference genome for read mapping. You can use any genome of your choosing, but for all of our testing and original CIRCLE-seq analyses we use hg19 ([download](http://www.broadinstitute.org/ftp/pub/seq/references/Homo_sapiens_assembly19.fasta)). Be sure to (g)unzip the FASTA file before use if it is compressed.
+
+### Download and Set Up circleseq<a name="circleseq_setup"></a>
+
+Once all dependencies are installed, there are a few easy steps to download and set up the circleseq package:
+
+1. Download a copy of the circleseq package source code. You can either download and unzip the latest source from the github [release page](https://github.com/tsailabSJ/circleseq/releases), or you use git to clone the repository by running `git clone --recursive https://github.com/tsailabSJ/circleseq.git`
+2. Install circleseq dependencies by entering the circleseq directory and running `pip install -r requirements.txt`
+
+Once all circleseq dependencies are installed, you will be ready to start using circleseq.
+
+
+## Usage<a name="usage"></a>
+
+Using this tool is simple. After [getting set up](#getting_set_up), create a ``.yaml`` manifest file referencing the dependencies and sample ``.fastq.gz`` file paths. Then, run ``python /path/to/circleseq.py all --manifest /path/to/manifest.yaml``
 
 Below is an example ``manifest.yaml`` file::
 
@@ -48,37 +95,12 @@ Below is an example ``manifest.yaml`` file::
             controlread2: /data/joung/sequencing_fastq/150902_M01326_0235_000000000-AHLT8/fastq/4_S4_L001_R2_001.fastq.gz
             description: U2OS_exp1
 
-##Getting Set Up<a href="getting_set_up"></a>
-
-### Install Dependencies<a name="install_dependencies"></a>
-
-To run circleseq, you must first install all necessary dependencies:
-
-- **Python 2.7**: If a version does not come bundled with your operating system, we recommend the [Anaconda](https://www.continuum.io/downloads) scientific Python package.
-- **Burrows-Wheeler Aligner (bwa)**: You can either install bwa with a package manager (e.g. `brew` on OSX or `apt-get` on Ubuntu/Debian), or you can download it from the [project page](http://bio-bwa.sourceforge.net/) and compile it from source.
-- **Samtools**: You can either install samtools with a package manager (e.g. `brew` or `apt-get`), or you can download it from the [project page](http://www.htslib.org/download/) and compile it from source.
-
-For both bwa and samtools, make sure you know the path to the respective executables, as they need to be specified in the pipeline manifest file.
-
-### Download Reference Genome<a name="reference_genome"></a>
-
-The circleseq package requires a reference genome for read mapping. You can use any genome of your choosing, but for all of our testing and original CIRCLE-seq analyses we use hg19 ([download](http://www.broadinstitute.org/ftp/pub/seq/references/Homo_sapiens_assembly19.fasta)). Be sure to (g)unzip the FASTA file before use if it is compressed.
-
-### Download and Set Up circleseq<a name="circleseq_setup"></a>
-
-Once all dependencies are installed, there are a few easy steps to download and set up the circleseq package:
-
-1. Obtain a copy of the circleseq package source code. You can either download and unzip the latest source from the github [release page](https://github.com/tsailabSJ/circleseq/releases), or you use git to clone the repository by running `git clone --recursive https://github.com/tsailabSJ/circleseq.git`
-2. Install circleseq dependencies by entering the circleseq directory and running `pip install -r requirements.txt`
-
-Once all circleseq dependencies are installed, you will be ready to start using circleseq.
-
 
 ## Testing the circleseq Package<a name="testing"></a>
 
-In the spirit of Test-Driven Development, we have written tests for the pipeline to protect against regression when making future updates. These can be used to ensure that the software is running with expected functionality.
+In the spirit of Test-Driven Development, we have written tests for the pipeline to protect against regressions when making future updates. These can be used to ensure that the software is running with expected functionality.
 
-NOTE: Due to differences in sorting between different versions of the `bwa` package, you must be using `bwa v0.7.9a` for these tests to work. We also recommend that you use `bedtools v2.25.0` when running these tests for consistency's sake.
+NOTE: Due to differences in sorting between different versions of the `bwa` package, you must be using `bwa 0.7.11` for these tests to work. We also recommend that you use `samtools 1.3` when running these tests for consistency's sake.
 
 ### Single-Step Regression Tests<a name="regression_tests"></a>
 
@@ -96,4 +118,7 @@ Then, from the circleseq root directory, simply run
 nosetests
 ```
 
-and the regression tests for each pipeline step will be run.
+and the regression tests for for the pipeline will be run.
+
+
+## FAQ<a name="FAQ"></a>
