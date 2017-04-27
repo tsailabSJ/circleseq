@@ -26,14 +26,17 @@ This package implements a pipeline that takes in reads from the CIRCLE-seq assay
 3. **Cleavage Site Identification**: 
 4. **Visualize**:
 
-## Dependencies
+## Dependencies<a href="dependencies"></a>
 
 * Python (2.7)
+* Reference genome fasta file ([Example](http://www.broadinstitute.org/ftp/pub/seq/references/Homo_sapiens_assembly19.fasta))
 * [`bwa`](https://github.com/lh3/bwa) alignment tool
 * [`samtools`](http://www.htslib.org/download/) alignment format manipulation
 
 
+
 ##Getting Set Up<a href="setup"></a>
+
 
 ### Install Dependencies<a name="install_dependencies"></a>
 
@@ -61,6 +64,7 @@ Once all circleseq dependencies are installed, you will be ready to start using 
 
 ## Usage<a name="usage"></a>
 
+### Quickstart<a name="quickstart"></a>
 Using this tool is simple. After [getting set up](#getting_set_up), create a ``.yaml`` manifest file referencing the dependencies and sample ``.fastq.gz`` file paths. Then, run ``python /path/to/circleseq.py all --manifest /path/to/manifest.yaml``
 
 Below is an example ``manifest.yaml`` file::
@@ -96,6 +100,36 @@ Below is an example ``manifest.yaml`` file::
             description: U2OS_exp1
 
 
+### Writing A Manifest File<a name="write_manifest"></a>
+When running the end-to-end analysis functionality of the circleseq package, a number of inputs are required. To simplify the formatting of these inputs and to encourage reproducibility, these parameters are inputted into the pipeline via a manifest formatted as a YAML file. YAML files allow easy-to-read specification of key-value pairs. This allows us to easily specify our parameters. The following fields are required in the manifest:
+
+- `reference_genome`: The absolute path to the reference genome FASTA file.
+- `output_folder`: The absolute path to the folder in which all pipeline outputs will be saved.
+- `bwa`: The absolute path to the `bwa` executable
+- `samtools`: The absolute path to the `samtools` executable
+- `read_threshold`: 4
+- `window_size`: 3
+- `mapq_threshold`: 50
+- `start_threshold`: 1
+- `gap_threshold`: 3
+- `mismatch_threshold`: 6
+- `merged_analysis`: True
+- `samples`: Lists the different 
+	- `forward`: The absolute path to the FASTQ file containing the forward reads.
+	- `reverse`: The absolute path to the FASTQ file containing the reverse reads.
+	- `index1`: The absolute path to the FASTQ file containing the forward index reads.
+	- `index2`: The absolute path to the FASTQ file containing the reverse index reads.
+
+
+### Pipeline Output<a name="pipeline_output"></a>
+When running the full pipeline, the results of each step are outputted to the `output_folder` in a separate folder for each step. The output folders and their respective contents are as follows:
+
+- `output_folder/aligned`: Contains an alignment `.sam`, alignment `.bam`, sorted `bam`, and `.bai` index file for each sample.
+- `output_folder/fastq`: Merged `.fastq.gz` files for each sample.
+- `output_folder/identified`: Contains tab-delimited `.txt` files for each sample containing the identified DSBs, control DSBs, filtered DSBs, and read quantification.
+- `output_folder/visualization`: Contains a `.svg` vector image representing an alignment of all detected off-targets to the targetsite for each sample.
+
+
 ## Testing the circleseq Package<a name="testing"></a>
 
 In the spirit of Test-Driven Development, we have written tests for the pipeline to protect against regressions when making future updates. These can be used to ensure that the software is running with expected functionality.
@@ -122,3 +156,5 @@ and the regression tests for for the pipeline will be run.
 
 
 ## FAQ<a name="FAQ"></a>
+
+None yet, we will keep this updated as needed.
