@@ -34,8 +34,7 @@ This package implements a pipeline that takes in reads from the CIRCLE-seq assay
 * [`samtools`](http://www.htslib.org/download/) alignment format manipulation
 
 
-
-##Getting Set Up<a href="setup"></a>
+## Getting Set Up<a href="setup"></a>
 
 
 ### Install Dependencies<a name="install_dependencies"></a>
@@ -65,7 +64,7 @@ Once all circleseq dependencies are installed, you will be ready to start using 
 ## Usage<a name="usage"></a>
 
 ### Quickstart<a name="quickstart"></a>
-Using this tool is simple. After [getting set up](#getting_set_up), create a ``.yaml`` manifest file referencing the dependencies and sample ``.fastq.gz`` file paths. Then, run ``python /path/to/circleseq.py all --manifest /path/to/manifest.yaml``
+Using this tool is simple. After [getting set up](#setup), create a ``.yaml`` manifest file referencing the dependencies and sample ``.fastq.gz`` file paths. Then, run ``python /path/to/circleseq.py all --manifest /path/to/manifest.yaml``
 
 Below is an example ``manifest.yaml`` file::
 
@@ -114,11 +113,14 @@ When running the end-to-end analysis functionality of the circleseq package, a n
 - `gap_threshold`: 3
 - `mismatch_threshold`: 6
 - `merged_analysis`: True
-- `samples`: Lists the different 
-	- `forward`: The absolute path to the FASTQ file containing the forward reads.
-	- `reverse`: The absolute path to the FASTQ file containing the reverse reads.
-	- `index1`: The absolute path to the FASTQ file containing the forward index reads.
-	- `index2`: The absolute path to the FASTQ file containing the reverse index reads.
+- `samples`: Lists the samples you wish to analyze and the details for each.
+    - For each sample, you must provide the following parametesr:
+        - `target`: Target sequence for that sample. Accepts degenerate bases.
+        - `read1`: The absolute path to the FASTQ file containing the read1 reads.
+        - `read2`: The absolute path to the FASTQ file containing the read2 reads.
+        - `controlread1`: The absolute path to the FASTQ file containing the control read1 reads.
+        - `controlread2`: The absolute path to the FASTQ file containing the control read2 reads.
+        - `description`: A brief of the sample
 
 
 ### Pipeline Output<a name="pipeline_output"></a>
