@@ -1,6 +1,10 @@
 *.py[cod]
 test/output
+<<<<<<< HEAD
 *.DS_Store
+=======
+.DS_Store
+>>>>>>> add-testing
 
 # PyCharm Pref Folder
 .idea

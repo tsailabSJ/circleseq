@@ -1,0 +1,11 @@
+#Chromosome	zero_based_Position	Nuclease_Position_Reads	Control_Position_Reads	Nuclease_Window_Reads	Control_Window_Reads	Nuclease_1k_Window_Reads	Control_1k_Window_Reads	left_control_50bp_window_Reads	right_control_50bp_window_Reads	p_Value	narrow_p_Value	one_k_p_Value	control_p_Value	control_narrow_p_Value	control_one_k_p_Value
+11	1005	29.0	0.0	58.0	0.0	58.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
+11	1006	29.0	0.0	58.0	0.0	58.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
+8	1004	4.0	0.0	746.0	0.0	746.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
+8	1005	368.0	0.0	746.0	0.0	746.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
+8	1006	373.0	0.0	746.0	0.0	746.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
+8	1007	1.0	0.0	746.0	0.0	746.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
+2	1015	1.0	0.0	1006.0	0.0	1006.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
+2	1016	503.0	0.0	1006.0	0.0	1006.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
+2	1017	476.0	0.0	1006.0	0.0	1006.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
+2	1018	26.0	0.0	1006.0	0.0	1006.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
