@@ -1,5 +1,4 @@
 # CIRCLE-seq: Comprehensive In vitro Reporting of CLeavage Effects by Sequencing
-[![travis badge](https://travis-ci.org/tsailabSJ/circleseq.svg?branch=master)](https://travis-ci.org/tsailabSJ/circleseq)
 
 This is a repository for CIRCLE-seq analytical software, which takes sample-specific paired end FASTQ files as input and produces a list of CIRCLE-seq detected off-target cleavage sites as output.
 
