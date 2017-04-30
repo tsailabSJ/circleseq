@@ -21,10 +21,10 @@ This is a repository for CIRCLE-seq analytical software, which takes sample-spec
 
 This package implements a pipeline that takes in reads from the CIRCLE-seq assay and returns detected cleavage sites as output. The individual pipeline steps are:
 
-1. **Read Alignment**: Paired end reads from the assay are aligned to the reference genome using the BWA-MEM algorithm with default parameters (Li. H, 2009).
-2. **Merge**:
-3. **Cleavage Site Identification**: 
-4. **Visualize**:
+1. **Merge**: Merge read1 an read2 for easier mapping to genome.
+2. **Read Alignment**: Merged paired end reads from the assay are aligned to the reference genome using the BWA-MEM algorithm with default parameters (Li. H, 2009).
+3. **Cleavage Site Identification**: Mapped sites are analyzed to determine which represent high-quality cleavage sites.
+4. **Visualization of Results**: Identified on-target and off-target cleavage sites are rendered as a color-coded alignment map for easy analysis of results.
 
 ## Dependencies<a href="dependencies"></a>
 
@@ -106,21 +106,21 @@ When running the end-to-end analysis functionality of the circleseq package, a n
 - `output_folder`: The absolute path to the folder in which all pipeline outputs will be saved.
 - `bwa`: The absolute path to the `bwa` executable
 - `samtools`: The absolute path to the `samtools` executable
-- `read_threshold`: 4
-- `window_size`: 3
-- `mapq_threshold`: 50
-- `start_threshold`: 1
-- `gap_threshold`: 3
-- `mismatch_threshold`: 6
-- `merged_analysis`: True
-- `samples`: Lists the samples you wish to analyze and the details for each.
-    - For each sample, you must provide the following parametesr:
+- `read_threshold`: The minimum number of reads at a location for that location to be called as a site. We recommend leaving it to the default value of 4.
+- `window_size`: Size of the sliding window, we recommend leaving it to the default value of 3.
+- `mapq_threshold`: Minimum read mapping quality score. We recommend leaving it to the default value of 50.
+- `start_threshold`: Tolerance for breakpoint location. We recommend leaving it to the default value of 1.
+- `gap_threshold`: Number of tolerated gaps in the fuzzy target search setp. We recommend leaving it to the default value of 3.
+- `mismatch_threshold`: Number of tolerated gaps in the fuzzy target search setp. We recommend leaving it to the default value of 6.
+- `merged_analysis`: Whether or not the paired read merging step should takingTrue
+- `samples`: Lists the samples you wish to analyze and the details for each. Each sample name should be nested under the top level samples key, and each sample detail should be nested under the sample name. See the sample manifest for an example.
+    - For each sample, you must provide the following parameters:
         - `target`: Target sequence for that sample. Accepts degenerate bases.
-        - `read1`: The absolute path to the FASTQ file containing the read1 reads.
-        - `read2`: The absolute path to the FASTQ file containing the read2 reads.
-        - `controlread1`: The absolute path to the FASTQ file containing the control read1 reads.
-        - `controlread2`: The absolute path to the FASTQ file containing the control read2 reads.
-        - `description`: A brief of the sample
+        - `read1`: The absolute path to the .FASTQ(.gz) file containing the read1 reads.
+        - `read2`: The absolute path to the .FASTQ(.gz) file containing the read2 reads.
+        - `controlread1`: The absolute path to the .FASTQ(.gz) file containing the control read1 reads.
+        - `controlread2`: The absolute path to the .FASTQ(.gz) file containing the control read2 reads.
+        - `description`: A brief description of the sample
 
 
 ### Pipeline Output<a name="pipeline_output"></a>
