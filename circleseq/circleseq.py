@@ -26,7 +26,7 @@ class CircleSeq:
         self.start_threshold = 1
         self.gap_threshold = 1
         self.mismatch_threshold = 6
-        self.merged_analysis = True
+        self.merged_analysis = False
 
     def parseManifest(self, manifest_path, sample='all'):
         logger.info('Loading manifest...')

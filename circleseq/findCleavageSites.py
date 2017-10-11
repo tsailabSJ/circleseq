@@ -2,11 +2,9 @@ from __future__ import print_function
 
 import argparse
 import HTSeq
-import nwalign as nw
 import os
 import pyfaidx
 import regex
-import string
 import statsmodels
 import sys
 
@@ -28,9 +26,8 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
     ga_coverage = HTSeq.GenomicArray("auto", stranded=False)
 
     read_count = 0
-    ref_chr = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
-                '20', '21', '22', 'X', 'Y']
-
+    ref_chr = [str(x) for x in range(1, 23)] + ['X', 'Y'] + [''.join(['chr',str(x)]) for x in range(1, 23)] + \
+              ['chrX', 'chrY'] + ['chrHHH'] + ['2R', '3R', '2L', '3L', 'X', 'Y_unplaced', 'NM4g4']
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
@@ -107,8 +104,8 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
     ga_coverage = HTSeq.GenomicArray("auto", stranded=False)
     read_count = 0
 
-    ref_chr = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
-                '20', '21', '22', 'X', 'Y']
+    ref_chr = [str(x) for x in range(1, 23)] + ['X', 'Y'] + [''.join(['chr', str(x)]) for x in range(1, 23)] + \
+              ['chrX', 'chrY'] + ['chrHHH'] + ['2R', '3R', '2L', '3L', 'X', 'Y_unplaced', 'NM4g4']
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
@@ -119,7 +116,7 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
             first_read_chr, first_read_position, first_read_strand = None, None, None
             second_read_chr, second_read_position, second_read_strand = None, None, None
 
-            if len(bundle) == 1: # single alignment
+            if len(bundle) == 1:  # single alignment
                 first_read, second_read = bundle[0]
                 if first_read.aligned:
                     if first_read.aQual >= mapq_threshold and not first_read.flag & 1024 and \
@@ -135,7 +132,7 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
                         second_read_chr = second_read.iv.chrom
                         second_read_position = second_read.iv.start_d
                         second_read_strand = second_read.iv.strand
-            elif len(bundle) > 1: # multiple alignments
+            elif len(bundle) > 1:  # multiple alignments
                 first_read_list, second_read_list = zip(*bundle)
                 filtered_first_read_list = []
                 filtered_second_read_list = []
@@ -170,20 +167,19 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
             ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position) <= gap_threshold)
             or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position) <= gap_threshold)):
 
-                #if first_read_chr in ref_chr and first_read_position and first_read_strand:
+                # if first_read_chr in ref_chr and first_read_position and first_read_strand:
                 ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
                 ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
                 ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
                 #    output = True
 
-                #if second_read_chr in ref_chr and second_read_position and second_read_strand:
+                # if second_read_chr in ref_chr and second_read_position and second_read_strand:
                 ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
                 ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
                 ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
                 output = True
 
             # Output read positions for plotting. Add gap.
-
             if output == True:
                 print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
                       first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
@@ -211,99 +207,145 @@ def find_windows(ga_windows, window_size):
                 ga_windows[consolidated_interval] = 1
                 last = consolidated_interval
 
-    return ga_windows # Return consolidated GenomicArray
+    return ga_windows  # Return consolidated GenomicArray
 
 """ Find actual sequences of potential off-target sites
 """
 def output_alignments(ga, narrow_ga, ga_windows, reference_genome, target_sequence, target_name, target_cells,
                       bam_filename, mismatch_threshold, ga_pval, out):
 
-    #dictionary to store the matched reads
+    # dictionary to store the matched reads
     matched_dict = {}   
-    #dictionary to add read_count for each pair chromosome:start_position among matched reads
+    # dictionary to add read_count for each pair chromosome:start_position among matched reads
     reads_dict = {}
-    #dictionary to store window_start. For duplicated matched off-target.
+    # dictionary to store window_start. For duplicated matched off-target.
     window_min = {}
-    #dictionary to store window_end. For duplicated matched off-target.
+    # dictionary to store window_end. For duplicated matched off-target.
     window_max = {}
 
-    #dictionary to store the unmatched reads
+    # dictionary to store the unmatched reads
     unmatched_dict = {}
     
     for iv,value in ga_windows.steps():
         if value:
-            window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20 , iv.end + 20)
-            sequence, distance, length, strand,  target_start_relative, target_end_relative, realigned_target = \
-                alignSequences(target_sequence, window_sequence, max_errors=mismatch_threshold)
-            if strand == "+":
-                target_start_absolute = target_start_relative + iv.start - 20
-                target_end_absolute = target_end_relative + iv.start - 20
-            elif strand == "-":
-                target_start_absolute = iv.end + 20 - target_end_relative
-                target_end_absolute = iv.end + 20 - target_start_relative
-            else:
-                target_start_absolute = iv.start
-                target_end_absolute = iv.end
-            name = iv.chrom +':'+ str(target_start_absolute) + '-' + str(target_end_absolute)
+            window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20, iv.end + 20)
+
+            offtarget_sequence_no_bulge, mismatches, chosen_alignment_strand_m, start_no_bulge, end_no_bulge, \
+            bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, \
+            chosen_alignment_strand_b, bulged_start, bulged_end, realigned_target = \
+            alignSequences(target_sequence, window_sequence, max_score=mismatch_threshold)
+
+            # get genomic coordinates of sequences
+            mm_start, mm_end, b_start, b_end = '', '', '', ''
+            if offtarget_sequence_no_bulge and chosen_alignment_strand_m == '+':
+                mm_start = iv.start - 20 + int(start_no_bulge)
+                mm_end = iv.start - 20 + int(end_no_bulge)
+            if offtarget_sequence_no_bulge and chosen_alignment_strand_m == '-':
+                mm_start = iv.end + 20 - int(end_no_bulge)
+                mm_end = iv.end + 20 - int(start_no_bulge)
+
+            if bulged_offtarget_sequence and chosen_alignment_strand_b == '+':
+                b_start = iv.start - 20 + int(bulged_start)
+                b_end = iv.start - 20 + int(bulged_end)
+            if bulged_offtarget_sequence and chosen_alignment_strand_b == '-':
+                b_start = iv.end + 20 - int(bulged_end)
+                b_end = iv.end + 20 - int(bulged_start)
+
+            #  define overall start and end position, only for annotation
+            if offtarget_sequence_no_bulge and bulged_offtarget_sequence:
+                target_start_absolute = min(mm_start, b_start)
+                target_end_absolute = max(mm_end, b_end)
+            elif offtarget_sequence_no_bulge and not bulged_offtarget_sequence:
+                target_start_absolute = mm_start
+                target_end_absolute = mm_end
+            elif not offtarget_sequence_no_bulge and bulged_offtarget_sequence:
+                target_start_absolute = b_start
+                target_end_absolute = b_end
+
+            if offtarget_sequence_no_bulge or bulged_offtarget_sequence:
+                name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
+
             read_count = int(max(set(narrow_ga[iv])))
             filename = os.path.basename(bam_filename)
             full_name = str(target_name) + '_' + str(target_cells) + '_' + str(name) + '_' + str(read_count)
-            if sequence:
+
+            if offtarget_sequence_no_bulge or bulged_offtarget_sequence:
                 tag = iv.chrom+':'+str(target_start_absolute)
                 if tag not in reads_dict.keys():
                     reads_dict[tag] = read_count
                     window_min[tag] = [iv.start]
                     window_max[tag] = [iv.end]
-                    matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand,
-                                         iv, iv.chrom, iv.start, iv.end, window_sequence, sequence, distance, length,
-                                         filename, target_name, target_cells, full_name, target_sequence, realigned_target]
+                    matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute,
+                                         iv.start, iv.end, name, read_count, iv, iv.chrom, window_sequence,
+                                         offtarget_sequence_no_bulge, mismatches,
+                                         chosen_alignment_strand_m, start_no_bulge, end_no_bulge,
+                                         bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
+                                         chosen_alignment_strand_b, bulged_start, bulged_end,
+                                         filename, target_cells, full_name, target_name, target_sequence, realigned_target]
                 else:
                     current_read_count = reads_dict[tag]
                     reads_dict[tag] = max(current_read_count, read_count) 
                     window_min[tag].append(iv.start)
                     window_max[tag].append(iv.end)
-                    matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, reads_dict[tag],
-                                         strand, iv, iv.chrom, min(window_min[tag]), max(window_max[tag]),
-                                         window_sequence, sequence, distance, length, filename, target_name,
-                                         target_cells, full_name, target_sequence, realigned_target]
+                    matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute,
+                                         min(window_min[tag]), max(window_max[tag]), name, reads_dict[tag],
+                                         iv, iv.chrom, window_sequence,
+                                         offtarget_sequence_no_bulge, mismatches,
+                                         chosen_alignment_strand_m, start_no_bulge, end_no_bulge,
+                                         bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
+                                         chosen_alignment_strand_b, bulged_start, bulged_end,
+                                         filename, target_cells, full_name, target_name, target_sequence,
+                                         realigned_target]
             else:
                 untag = iv.chrom+':'+str(iv.start)
-                unmatched_dict[untag] = [iv.chrom, target_start_absolute, target_end_absolute, name, read_count, strand,
-                                         iv, iv.chrom, iv.start, iv.end, window_sequence, sequence, distance, length,
-                                         filename, target_name, target_cells, full_name, target_sequence, 'none']
+                unmatched_dict[untag] = [iv.chrom, target_start_absolute, target_end_absolute,
+                                         iv.start, iv.end, name, read_count, iv, iv.chrom,  window_sequence,
+                                         offtarget_sequence_no_bulge, mismatches,
+                                         chosen_alignment_strand_m, start_no_bulge, end_no_bulge,
+                                         bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
+                                         chosen_alignment_strand_b, bulged_start, bulged_end,
+                                         filename, target_cells, full_name, target_name, target_sequence, 'none']
 
     # Write matched table
     print("Writing matched table", file=sys.stderr)
     tags_sorted = matched_dict.keys()
     tags_sorted.sort()
     outfile_matched = '{0}_identified_matched.txt'.format(out)
-    with open(outfile_matched, 'w') as o1:
+
+    o1 = open(outfile_matched, 'w')
+    print('Chromosome', 'PositionStart', 'PositionEnd', 'Name', 'ReadCount',
+          'WindowName', 'WindowChromosome', 'WindowSequence',
+          'Site_SubstitutionsOnly.Sequence', 'Site_SubstitutionsOnly.NumSubstitutions',
+          'Site_SubstitutionsOnly.Strand', 'Site_SubstitutionsOnly.Start', 'Site_SubstitutionsOnly.End',
+          'Site_GapsAllowed.Sequence', 'Site_GapsAllowed.Length', 'Site_GapsAllowed.Score',
+          'Site_GapsAllowed.Substitutions', 'Site_GapsAllowed.Insertions', 'Site_GapsAllowed.Deletions',
+          'Site_GapsAllowed.Strand', 'Site_GapsAllowed.Start', 'Site_GapsAllowed.End',
+          'FileName', 'Cell', 'Targetsite', 'FullName', 'TargetSequence', 'RealignedTargetSequence',
+          'Position.Pvalue', 'Narrow.Pvalue', 'Position.Control.Pvalue', 'Narrow.Control.Pvalue',
+          sep='\t', file=o1)
+    o1.close()
+
+    with open(outfile_matched, 'a') as o1:
         for key in tags_sorted:
             row = matched_dict[key]
 
-            # ns_pos_pval_list, ns_nar_pval_list, ns_one_pval_list = list(), list(), list()
-            pos_pval_list, nar_pval_list, one_pval_list = list(), list(), list()
-            control_pos_pval_list, control_nar_pval_list, control_one_pval_list = list(), list(), list()
+            pos_pval_list, nar_pval_list = list(), list()
+            control_pos_pval_list, control_nar_pval_list = list(), list()
 
             iv_pval = HTSeq.GenomicInterval(row[0], int(row[1]), int(row[2]), '.')
-            for interval,value in ga_pval[iv_pval].steps():
+            for interval, value in ga_pval[iv_pval].steps():
                 if value is not None:
                     pos_pval_list.append(value[0])
                     nar_pval_list.append(value[1])
-                    one_pval_list.append(value[2])
-                    control_pos_pval_list.append(value[3])
-                    control_nar_pval_list.append(value[4])
-                    control_one_pval_list.append(value[5])
+                    control_pos_pval_list.append(value[2])
+                    control_nar_pval_list.append(value[3])
 
             pval_pos = min(pos_pval_list)
             pval_nar = min(nar_pval_list)
-            pval_one = min(one_pval_list)
             control_pval_pos = min(control_pos_pval_list)
             control_pval_nar = min(control_nar_pval_list)
-            control_pval_one = min(control_one_pval_list)
 
-            print(*(row + [pval_pos, pval_nar, pval_one, control_pval_pos,
-                           control_pval_nar, control_pval_one]), sep='\t', file=o1)
+            print(*([row[0]] + row[3:] + [pval_pos, pval_nar, control_pval_pos, control_pval_nar]), sep='\t', file=o1)
 
     # Write unmatched table
     print("Writing unmatched table", file=sys.stderr)
@@ -314,37 +356,32 @@ def output_alignments(ga, narrow_ga, ga_windows, reference_genome, target_sequen
         for unkey in untags_sorted:
             unrow = unmatched_dict[unkey]
 
-            # un_ns_pos_pval_list, un_ns_nar_pval_list, un_ns_one_pval_list = list(), list(), list()
-            un_pos_pval_list, un_nar_pval_list, un_one_pval_list = list(), list(), list()
-            un_control_pos_pval_list, un_control_nar_pval_list, un_control_one_pval_list = list(), list(), list()
+            un_pos_pval_list, un_nar_pval_list = list(), list()
+            un_control_pos_pval_list, un_control_nar_pval_list = list(), list()
 
             iv_pval = HTSeq.GenomicInterval(unrow[0], int(unrow[1]), int(unrow[2]), '.')
-            for interval,value in ga_pval[iv_pval].steps():
+            for interval, value in ga_pval[iv_pval].steps():
                 if value is not None:
                     un_pos_pval_list.append(value[0])
                     un_nar_pval_list.append(value[1])
-                    un_one_pval_list.append(value[2])
-                    un_control_pos_pval_list.append(value[3])
-                    un_control_nar_pval_list.append(value[4])
-                    un_control_one_pval_list.append(value[5])
+                    un_control_pos_pval_list.append(value[2])
+                    un_control_nar_pval_list.append(value[3])
 
             un_pval_pos = min(un_pos_pval_list)
             un_pval_nar = min(un_nar_pval_list)
-            un_pval_one = min(un_one_pval_list)
             un_control_pval_pos = min(un_control_pos_pval_list)
             un_control_pval_nar = min(un_control_nar_pval_list)
-            un_control_pval_one = min(un_control_one_pval_list)
 
-            print(*(unrow + [un_pval_pos, un_pval_nar, un_pval_one,
-                             un_control_pval_pos, un_control_pval_nar, un_control_pval_one]), sep='\t', file=o2)
+            print(*(unrow + [un_pval_pos, un_pval_nar, un_control_pval_pos, un_control_pval_nar]), sep='\t', file=o2)
 
-    # return matched_dict, unmatched_dict
 
 """ Reverse complement DNA sequence
 """
-def reverseComplement(sequence):
-    transtab = string.maketrans("ACGT","TGCA")
-    return sequence.translate(transtab)[::-1]
+def reverseComplement(seq):
+    compl = dict({'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C', 'N': 'N', 'a': 't', 't': 'a', 'c': 'g', 'g': 'c', 'n': 'n', '.': '.', '-': '-', '_': '_'})
+    out_list = [compl[bp] for bp in seq]
+    return ''.join(out_list[::-1])
+
 
 def regexFromSequence(seq, lookahead=True, indels=1, errors=7):
     seq = seq.upper()
@@ -374,55 +411,106 @@ def regexFromSequence(seq, lookahead=True, indels=1, errors=7):
     pattern_gap = pattern + '{{i<={0},d<={0},s<={1},3i+3d+1s<={1}}}'.format(indels, errors)
     return pattern_standard, pattern_gap
 
+
+def extendedPattern(seq, indels=1, errors=7):
+    IUPAC_notation_regex_extended = {'N': '[ATCGN]','-': '[ATCGN]','Y': '[CTY]','R': '[AGR]','W': '[ATW]','S': '[CGS]','A': 'A','T': 'T','C': 'C','G': 'G'}
+    realign_pattern = ''
+    for c in seq:
+        realign_pattern += IUPAC_notation_regex_extended[c]
+    return '(?b:' + realign_pattern + ')' + '{{i<={0},d<={0},s<={1},3i+3d+1s<={1}}}'.format(indels, errors)
+
+def realignedSequences(targetsite_sequence, chosen_alignment, errors=7):
+    match_sequence = chosen_alignment.group()
+    substitutions, insertions, deletions = chosen_alignment.fuzzy_counts
+
+    # get the .fuzzy_counts associated to the matching sequence after adjusting for indels, where 0 <= INS, DEL <= 1
+    realigned_fuzzy = (substitutions, max(0, insertions - 1), max(0, deletions - 1))
+
+    if insertions:  # DNA-bulge
+        targetsite_realignments = [targetsite_sequence[:i] + '-' + targetsite_sequence[i:] for i in range(1, len(targetsite_sequence))]
+    else:
+        targetsite_realignments = [targetsite_sequence]
+
+    realigned_target_sequence, realigned_offtarget_sequence = None, ''  # in case the matching sequence is not founded
+
+    for seq in targetsite_realignments:
+        if deletions:  # RNA-bulge
+            match_realignments = [match_sequence[:i + 1] + '-' + match_sequence[i + 1:] for i in range(len(match_sequence) - 1)]
+            match_pattern = [match_sequence[:i + 1] + seq[i + 1] + match_sequence[i + 1:] for i in range(len(match_sequence) - 1)]
+        else:
+            match_realignments = match_pattern = [match_sequence]
+
+        x = extendedPattern(seq, errors)
+        for y_pattern, y_alignment in zip(match_pattern, match_realignments):
+            m = regex.search(x, y_pattern, regex.BESTMATCH)
+            if m and m.fuzzy_counts == realigned_fuzzy:
+                realigned_target_sequence, realigned_offtarget_sequence = seq, y_alignment
+    return realigned_target_sequence, realigned_offtarget_sequence
+
+
 """
 Given a targetsite and window, use a fuzzy regex to align the targetsite to
 the window. Returns the best match.
 """
-def alignSequences(targetsite_sequence, window_sequence, max_errors=7):
+def alignSequences(targetsite_sequence, window_sequence, max_score=7):
+
     window_sequence = window_sequence.upper()
+    query_regex_standard, query_regex_gap = regexFromSequence(targetsite_sequence, errors=max_score)
+
     # Try both strands
-    query_regex_standard, query_regex_gap = regexFromSequence(targetsite_sequence, errors=max_errors)
+    alignments_mm, alignments_bulge = list(), list()
+    alignments_mm.append(('+', 'standard', regex.search(query_regex_standard, window_sequence, regex.BESTMATCH)))
+    alignments_mm.append(('-', 'standard', regex.search(query_regex_standard, reverseComplement(window_sequence), regex.BESTMATCH)))
+    alignments_bulge.append(('+', 'gapped', regex.search(query_regex_gap, window_sequence, regex.BESTMATCH)))
+    alignments_bulge.append(('-', 'gapped', regex.search(query_regex_gap, reverseComplement(window_sequence), regex.BESTMATCH)))
 
-    alignments = list()
-    alignments.append(('+', 'standard', regex.search(query_regex_standard, window_sequence, regex.BESTMATCH)))
-    alignments.append(('-', 'standard', regex.search(query_regex_standard, reverseComplement(window_sequence),
-                                                     regex.BESTMATCH)))
-    alignments.append(('+', 'gapped', regex.search(query_regex_gap, window_sequence, regex.BESTMATCH)))
-    alignments.append(('-', 'gapped', regex.search(query_regex_gap, reverseComplement(window_sequence),
-                                                   regex.BESTMATCH)))
+    lowest_distance_score, lowest_mismatch = 100, max_score + 1
+    chosen_alignment_b, chosen_alignment_m, chosen_alignment_strand_b, chosen_alignment_strand_m = None, None, '', ''
 
-    lowest_distance_score = 100
-    chosen_alignment = None
-    chosen_alignment_strand = None
-    for i, aln in enumerate(alignments):
-        strand, alignment_type, match = aln
-        if match != None:
-            substitutions, insertions, deletions = match.fuzzy_counts
-            distance_score = substitutions + (insertions + deletions) * 3
-            if distance_score < lowest_distance_score:
-                chosen_alignment = match
-                chosen_alignment_strand = strand
-                lowest_distance_score = distance_score
+    for aln_m in alignments_mm:
+        strand_m, alignment_type_m, match_m = aln_m
+        if match_m != None:
+            mismatches, insertions, deletions = match_m.fuzzy_counts
+            if mismatches < lowest_mismatch:
+                chosen_alignment_m = match_m
+                chosen_alignment_strand_m = strand_m
+                lowest_mismatch = mismatches
 
-    if chosen_alignment:
-        match_sequence = chosen_alignment.group()
-        match_substitutions, match_insertions, match_deletions = chosen_alignment.fuzzy_counts
-        distance = sum(chosen_alignment.fuzzy_counts)
-        length = len(match_sequence)
+    for aln_b in alignments_bulge:
+        strand_b, alignment_type_b, match_b = aln_b
+        if match_b != None:
+            substitutions, insertions, deletions = match_b.fuzzy_counts
+            if insertions or deletions:
+                distance_score = substitutions + (insertions + deletions) * 3
+                edistance = substitutions + insertions + deletions
+                if distance_score < lowest_distance_score and edistance < lowest_mismatch:
+                    chosen_alignment_b = match_b
+                    chosen_alignment_strand_b = strand_b
+                    lowest_distance_score = distance_score
 
-        start = chosen_alignment.start()
-        end = chosen_alignment.end()
-        path = os.path.dirname(os.path.abspath(__file__))
-        if match_insertions or match_deletions:
-            realigned_match_sequence, realigned_target = nw.global_align(match_sequence, targetsite_sequence,
-                                                                     gap_open=-10, gap_extend=-100,
-                                                                     matrix='{0}/NUC_SIMPLE'.format(path))
-            return [realigned_match_sequence, distance, length, chosen_alignment_strand, start, end, realigned_target]
-        else:
-            return [match_sequence, distance, length, chosen_alignment_strand, start, end, targetsite_sequence]
-
+    if chosen_alignment_m:
+        offtarget_sequence_no_bulge = chosen_alignment_m.group()
+        mismatches = chosen_alignment_m.fuzzy_counts[0]
+        start_no_bulge = chosen_alignment_m.start()
+        end_no_bulge = chosen_alignment_m.end()
     else:
-        return [''] * 6 + ['none']
+        offtarget_sequence_no_bulge, mismatches, start_no_bulge, end_no_bulge, chosen_alignment_strand_m = '', '', '', '', ''
+
+    bulged_offtarget_sequence, score, length, substitutions, insertions, deletions, bulged_start, bulged_end, realigned_target = \
+        '', '', '', '', '', '', '', '', 'none'
+    if chosen_alignment_b:
+        realigned_target, bulged_offtarget_sequence = realignedSequences(targetsite_sequence, chosen_alignment_b, max_score)
+        if bulged_offtarget_sequence:
+            length = len(chosen_alignment_b.group())
+            substitutions, insertions, deletions = chosen_alignment_b.fuzzy_counts
+            score = substitutions + (insertions + deletions) * 3
+            bulged_start = chosen_alignment_b.start()
+            bulged_end = chosen_alignment_b.end()
+        else:
+            chosen_alignment_strand_b = ''
+
+    return [offtarget_sequence_no_bulge, mismatches, chosen_alignment_strand_m, start_no_bulge, end_no_bulge,
+            bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, chosen_alignment_strand_b, bulged_start, bulged_end, realigned_target]
 
 
 """ Get sequences from some reference genome
@@ -435,53 +523,18 @@ def get_sequence(reference_genome, chromosome, start, end, strand="+"):
     return str(seq)
 
 
-# def analyze(ref, bam, targetsite, reads, windowsize, mapq_threshold, gap_threshold, start_threshold, name, cells, out,
-#             merged=True):
-#     output_folder = os.path.dirname(out)
-#     if not os.path.exists(output_folder):
-#         os.makedirs(output_folder)
-#
-#     reference_genome = pyfaidx.Fasta(ref)
-#     print("Reference genome loaded.", file=sys.stderr)
-#     print('Reads: {0}, Window: {1}, MAPQ: {2}, Gap: {3}, Start {4}'.format(reads, windowsize, mapq_threshold,
-#                 gap_threshold, start_threshold), file=sys.stderr)
-#     if merged:
-#         print("Tabulate merged start positions.", file=sys.stderr)
-#         ga, ga_windows, ga_stranded, ga_coverage, total_count = tabulate_merged_start_positions(bam, cells,
-#                 name, targetsite, mapq_threshold, gap_threshold, start_threshold, out)
-#     else:
-#         print("Tabulate individual start positions.", file=sys.stderr)
-#         ga, ga_windows, ga_stranded = tabulate_start_positions(bam, cells, name, targetsite, out)
-#     ga_consolidated_windows = find_windows(ga_windows, windowsize)
-#     print("\nGet consolidated windows.", file=sys.stderr)
-#
-#     samples_dict = output_alignments(ga, narrow_ga, ga_consolidated_windows, reference_genome, targetsite, name, cells,
-#                                      bam, reads, out)
-#     tags_sorted = samples_dict.keys()
-#     tags_sorted.sort()
-#     outfile_matched = '{0}_identified_matched.txt'.format(out)
-#     o1 = open(outfile_matched, 'w')
-#     for key in tags_sorted:
-#         print(*samples_dict[key], sep='\t', file=o1)
-#     o1.close()
-#     print("Get alignments.", file=sys.stderr)
-
-
-def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, gap_threshold, start_threshold, mismatch_threshold, name,
-            cells, out, merged=True):
+def compare(ref, bam, control, targetsite, windowsize, mapq_threshold, gap_threshold, start_threshold, mismatch_threshold, name,
+            cells, out, merged=False):
 
     output_list = list()
 
     reference_genome = pyfaidx.Fasta(ref)
-    combined_ga = HTSeq.GenomicArray("auto", stranded=False) # Store the union of control and nuclease positions
-    offtarget_ga_windows = HTSeq.GenomicArray("auto", stranded=False) # Store potential off-target sites
-    ga_narrow_windows = HTSeq.GenomicArray("auto", stranded=False) # Store potential off-target sites narrow windows read counts
-    ga_left_control_50bp_windows = HTSeq.GenomicArray("auto", stranded=False) # Store left local control window read counts
-    ga_right_control_50bp_windows = HTSeq.GenomicArray("auto", stranded=False) # Store right local control window read counts
+    combined_ga = HTSeq.GenomicArray("auto", stranded=False)  # Store the union of control and nuclease positions
+    offtarget_ga_windows = HTSeq.GenomicArray("auto", stranded=False)  # Store potential off-target sites
+    ga_narrow_windows = HTSeq.GenomicArray("auto", stranded=False)  # Store potential off-target sites narrow windows read counts
 
-    bg_position = list() # List to store nuclease_position_counts that were observed at least once
-    bg_narrow = list() # List to store the sum of nuclease_position_counts in the narrow window
-    bg_one_k = list() # List to store the sum of nuclease_position_counts in the one_k window
+    bg_position = list()  # List to store nuclease_position_counts that were observed at least once
+    bg_narrow = list()  # List to store the sum of nuclease_position_counts in the narrow window
 
     output_folder = os.path.dirname(out)
     if not os.path.exists(output_folder):
@@ -524,15 +577,6 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                     window = HTSeq.GenomicInterval(position.chrom, max(0, position.pos - windowsize),
                                                    position.pos + windowsize + 1)
 
-                    left_control_50bp_window = HTSeq.GenomicInterval(position.chrom, max(0, position.pos - 70),
-                                                   position.pos - 20 + 1)
-                    right_control_50bp_window = HTSeq.GenomicInterval(position.chrom, max(0, position.pos + 20),
-                                                   position.pos + 70 + 1)
-
-
-                    one_k_window = HTSeq.GenomicInterval(position.chrom, max(0, position.pos - 500),
-                                                         position.pos + windowsize + 500)
-
                     # Start mapping positions, at the specific base position
                     nuclease_position_counts = nuclease_ga[position]
                     control_position_counts = control_ga[position]
@@ -543,40 +587,23 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                     # In the narrow (parameter-specified) window
                     nuclease_window_counts = sum(nuclease_ga[window])
                     control_window_counts = sum(control_ga[window])
-
-                    # In the surrounding area (left and right control windows) for background
-                    left_control_50bp_window_counts = sum(nuclease_ga[left_control_50bp_window])
-                    right_control_50bp_window_counts = sum(nuclease_ga[right_control_50bp_window])
-
                     # Store control_window_counts greater than zero
                     if control_window_counts >= 0:
                         bg_narrow.append(control_window_counts)
 
-                    # In a 1kb window
-                    nuclease_one_k_window_counts = sum(nuclease_ga[one_k_window])
-                    control_one_k_window_counts = sum(control_ga[one_k_window])
-                    # Store control_one_k_window_counts greater than zero
-                    if control_one_k_window_counts >= 0:
-                        bg_one_k.append(control_one_k_window_counts)
-
                     # A list of the outputs
                     row = [position.chrom, position.pos, nuclease_position_counts, control_position_counts,
-                           nuclease_window_counts, control_window_counts, nuclease_one_k_window_counts,
-                           control_one_k_window_counts, left_control_50bp_window_counts, right_control_50bp_window_counts]
+                           nuclease_window_counts, control_window_counts]
                     output_list.append(row)
 
 
         print('#Chromosome', 'zero_based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads',
               'Nuclease_Window_Reads', 'Control_Window_Reads',
-              'Nuclease_1k_Window_Reads', 'Control_1k_Window_Reads', 'left_control_50bp_window_Reads',
-              'right_control_50bp_window_Reads',
-              'p_Value', 'narrow_p_Value', 'one_k_p_Value',
-              'control_p_Value', 'control_narrow_p_Value','control_one_k_p_Value', file=o, sep='\t')
+              'p_Value', 'narrow_p_Value', 'control_p_Value', 'control_narrow_p_Value', file=o, sep='\t')
 
         # Empiricals cdf
         ecdf_pos = statsmodels.distributions.empirical_distribution.ECDF(bg_position)
         ecdf_nar = statsmodels.distributions.empirical_distribution.ECDF(bg_narrow)
-        ecdf_one = statsmodels.distributions.empirical_distribution.ECDF(bg_one_k)
 
         # Genomic array to store the p-values for every chromosome:position object
         ga_pval = HTSeq.GenomicArray("auto", typecode='O', stranded=False)
@@ -587,25 +614,21 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
         for idx, fields in enumerate(output_list):
             position_p_val = 1 - ecdf_pos(fields[2]*scale_factor)
             narrow_p_val = 1 - ecdf_nar(fields[4]*scale_factor)
-            one_k_p_val = 1 - ecdf_one(fields[6]*scale_factor)
 
             control_position_p_val = 1 - ecdf_pos(fields[3])
             control_narrow_p_val = 1 - ecdf_nar(fields[5])
-            control_one_k_p_val = 1 - ecdf_one(fields[7])
 
-            if narrow_p_val<0.01 or position_p_val<0.01:
+            if narrow_p_val < 0.01 or position_p_val < 0.01:
                 read_chr = fields[0]
                 read_position = fields[1]
                 offtarget_ga_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = 1
                 ga_narrow_windows[HTSeq.GenomicPosition(read_chr, read_position, '.')] = fields[4]
 
-            print(*(fields + [position_p_val, narrow_p_val, one_k_p_val,
-                  control_position_p_val, control_narrow_p_val, control_one_k_p_val]), file=o, sep='\t')
+            print(*(fields + [position_p_val, narrow_p_val, control_position_p_val, control_narrow_p_val]),
+                  file=o, sep='\t')
 
             chr_pos = HTSeq.GenomicPosition(fields[0], int(fields[1]), '.')
-            ga_pval[chr_pos] = [position_p_val, narrow_p_val, one_k_p_val,
-                                control_position_p_val, control_narrow_p_val, control_one_k_p_val]
-
+            ga_pval[chr_pos] = [position_p_val, narrow_p_val, control_position_p_val, control_narrow_p_val]
 
         ga_consolidated_windows = find_windows(offtarget_ga_windows, windowsize)    # consolidate windows within 3 bp
 
@@ -619,12 +642,11 @@ def main():
     parser.add_argument('--bam', help='Sorted BAM file', required=True)
     parser.add_argument('--control', help='Control BAM file', required=True)
     parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
-    parser.add_argument('--reads', help='Read threshold', default=4, type=int)
     parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
     parser.add_argument('--mapq', help='mapq threshold', default=50, type=int)
     parser.add_argument('--gap', help='Gap threshold', default=3, type=int)
     parser.add_argument('--start', help='Start threshold', default=1 , type=int)
-    parser.add_argument('--mismatch', help='Mismatch threshold', default=6, type=int)
+    parser.add_argument('--mismatch_threshold', help='Maximum score threshold', default=6, type=int)
     parser.add_argument('--merged', dest='merged', action='store_true', default=False)
     parser.add_argument('--name', help='Targetsite Name', required=False)
     parser.add_argument('--cells', help='Cells', required=False)
@@ -633,8 +655,8 @@ def main():
 
     # Run the comparison if the control bam is specified, otherwise run the standard site identification routine.
     print("Nuclease: {0}\nControl: {1}".format(args.bam, args.control), file=sys.stderr)
-    compare(args.ref, args.bam, args.control, args.targetsite, args.reads, args.windowsize, args.mapq, args.gap,
-            args.start, args.mismatch, args.name, args.cells, args.out, args.merged)
+    compare(args.ref, args.bam, args.control, args.targetsite, args.windowsize, args.mapq, args.gap,
+            args.start, args.mismatch_threshold, args.name, args.cells, args.out, args.merged)
 
 if __name__ == "__main__":
     main()
