@@ -1,6 +1,7 @@
 """
 circleseq.py as the wrapper for CIRCLE-seq analysis
 """
+### 2017-October-11: Put "merged_analysis = False" as default; clean code of non-used parameters.
 
 from alignReads import alignReads
 from visualization import visualizeOfftargets
@@ -146,8 +147,7 @@ class CircleSeq:
                     sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
                     control_sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '_sorted.bam')
                 identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample)
-                logger.info('Reads: {0}, Window: {1}, MAPQ: {2}, Gap: {3}, Start {4}, Mismatches {5}'.format(self.read_threshold,
-                     self.window_size, self.mapq_threshold, self.gap_threshold, self.start_threshold, self.mismatch_threshold))
+                logger.info('Window: {0}, MAPQ: {1}, Gap: {2}, Start {3}, Mismatches {4}'.format(self.window_size, self.mapq_threshold, self.gap_threshold, self.start_threshold, self.mismatch_threshold))
                 findCleavageSites.compare(self.reference_genome, sorted_bam_file, control_sorted_bam_file, self.samples[sample]['target'],
                                           self.window_size, self.mapq_threshold, self.gap_threshold,
                                           self.start_threshold, self.mismatch_threshold, sample, self.samples[sample]['description'],
@@ -190,7 +190,6 @@ class CircleSeq:
 
     def referenceFree(self):
         pass
-
 
 def parse_args():
     parser = argparse.ArgumentParser()

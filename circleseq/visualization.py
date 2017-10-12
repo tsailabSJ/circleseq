@@ -1,9 +1,11 @@
 from __future__ import print_function
+
 import svgwrite
 import os
 import logging
 import argparse
 
+### 2017-October-11: Adapt plots to new output; inputs are managed using "argparse".
 
 logger = logging.getLogger('root')
 logger.propagate = False
@@ -12,8 +14,7 @@ boxWidth = 10
 box_size = 15
 v_spacing = 3
 
-colors = {'G': '#F5F500', 'A': '#FF5454', 'T': '#00D118', 'C': '#26A8FF', 'N': '#B3B3B3', '-': '#FFFFFF'}
-
+colors = {'G': '#F5F500', 'A': '#FF5454', 'T': '#00D118', 'C': '#26A8FF', 'N': '#B3B3B3', '-': '#B3B3B3'}
 
 def parseSitesFile(infile):
     offtargets = []
@@ -79,7 +80,7 @@ def visualizeOfftargets(infile, outfile, title):
         tick_locations.sort()
         tick_legend = ['P', 'A', 'M'] + [str(x) for x in [str(x-3) for x in tick_locations[3:]]]
 
-    for x,y in zip(tick_locations, tick_legend):
+    for x, y in zip(tick_locations, tick_legend):
         dwg.add(dwg.text(y, insert=(x_offset + (x - 1) * box_size + 2, y_offset - 2), style="font-size:10px; font-family:Courier"))
 
     # Draw reference sequence row

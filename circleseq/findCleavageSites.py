@@ -8,6 +8,7 @@ import regex
 import statsmodels
 import sys
 
+### 2017-October-11: Remove computation and storing of p-values not in use; use corrected (symmetric) alignment.
 
 """ Tabulate merged start positions.
     Identify genomic coordinates for reads mapping across 151/152 bp position.
@@ -258,16 +259,17 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
             elif not offtarget_sequence_no_bulge and bulged_offtarget_sequence:
                 target_start_absolute = b_start
                 target_end_absolute = b_end
+            else:
+                target_start_absolute = iv.start
+                target_end_absolute = iv.end
 
-            if offtarget_sequence_no_bulge or bulged_offtarget_sequence:
-                name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
-
+            name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
             read_count = int(max(set(narrow_ga[iv])))
             filename = os.path.basename(bam_filename)
             full_name = str(target_name) + '_' + str(target_cells) + '_' + str(name) + '_' + str(read_count)
 
             if offtarget_sequence_no_bulge or bulged_offtarget_sequence:
-                tag = iv.chrom+':'+str(target_start_absolute)
+                tag = iv.chrom + ':' + str(target_start_absolute)
                 if tag not in reads_dict.keys():
                     reads_dict[tag] = read_count
                     window_min[tag] = [iv.start]
@@ -294,7 +296,7 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                                          filename, target_cells, full_name, target_name, target_sequence,
                                          realigned_target]
             else:
-                untag = iv.chrom+':'+str(iv.start)
+                untag = iv.chrom + ':' + str(iv.start)
                 unmatched_dict[untag] = [iv.chrom, target_start_absolute, target_end_absolute,
                                          iv.start, iv.end, name, read_count, iv, iv.chrom,  window_sequence,
                                          offtarget_sequence_no_bulge, mismatches,
@@ -591,7 +593,6 @@ def compare(ref, bam, control, targetsite, windowsize, mapq_threshold, gap_thres
                            nuclease_window_counts, control_window_counts]
                     output_list.append(row)
 
-
         print('#Chromosome', 'zero_based_Position', 'Nuclease_Position_Reads', 'Control_Position_Reads',
               'Nuclease_Window_Reads', 'Control_Window_Reads',
               'p_Value', 'narrow_p_Value', 'control_p_Value', 'control_narrow_p_Value', file=o, sep='\t')
@@ -629,7 +630,6 @@ def compare(ref, bam, control, targetsite, windowsize, mapq_threshold, gap_thres
 
         output_alignments(ga_narrow_windows, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam,
                           mismatch_threshold, ga_pval, out)
-
 
 def main():
     parser = argparse.ArgumentParser(description='Identify off-target candidates from Illumina short read sequencing data.')
