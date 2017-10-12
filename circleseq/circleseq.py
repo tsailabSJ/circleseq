@@ -20,7 +20,6 @@ logger = log.createCustomLogger('root')
 class CircleSeq:
 
     def __init__(self):
-        self.read_threshold = 4
         self.window_size = 3
         self.mapq_threshold = 0
         self.start_threshold = 1
@@ -43,8 +42,6 @@ class CircleSeq:
             self.analysis_folder = manifest_data['analysis_folder']
 
             # Allow the user to specify read threshold and windowsize if they'd like
-            if 'read_threshold' in manifest_data:
-                self.read_threshold = manifest_data['read_threshold']
             if 'window_size' in manifest_data:
                 self.window_size = manifest_data['window_size']
             if 'mapq_threshold' in manifest_data:
@@ -64,7 +61,7 @@ class CircleSeq:
                 self.samples = {}
                 self.samples[sample] = manifest_data['samples'][sample]
             # Make folders for output
-            for folder in [ 'aligned', 'identified', 'fastq', 'visualization' ]:
+            for folder in ['aligned', 'identified', 'fastq', 'visualization']:
                 output_folder = os.path.join(self.analysis_folder, folder)
                 if not os.path.exists(output_folder):
                     os.makedirs(output_folder)
@@ -152,7 +149,7 @@ class CircleSeq:
                 logger.info('Reads: {0}, Window: {1}, MAPQ: {2}, Gap: {3}, Start {4}, Mismatches {5}'.format(self.read_threshold,
                      self.window_size, self.mapq_threshold, self.gap_threshold, self.start_threshold, self.mismatch_threshold))
                 findCleavageSites.compare(self.reference_genome, sorted_bam_file, control_sorted_bam_file, self.samples[sample]['target'],
-                                          self.read_threshold, self.window_size, self.mapq_threshold, self.gap_threshold,
+                                          self.window_size, self.mapq_threshold, self.gap_threshold,
                                           self.start_threshold, self.mismatch_threshold, sample, self.samples[sample]['description'],
                                           identified_sites_file, merged=self.merged_analysis)
         except Exception as e:
@@ -240,7 +237,6 @@ def main():
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
         c.alignReads()
-        # c.mergeAlignReads()
         c.findCleavageSites()
         c.visualize()
     elif args.command == 'parallel':

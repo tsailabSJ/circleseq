@@ -13,8 +13,7 @@ import sys
     Identify genomic coordinates for reads mapping across 151/152 bp position.
     Add positions to genomic array.
 """
-def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_threshold, gap_threshold,
-                                    start_threshold, outfile_base):
+def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, outfile_base):
     output_filename = '{0}_coordinates.txt'.format(outfile_base)
 
     sorted_bam_file = HTSeq.BAM_Reader(BamFileName)
@@ -38,7 +37,6 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
             output = False
             first_read_chr, first_read_position, first_read_strand = None, None, None
             second_read_chr, second_read_position, second_read_strand = None, None, None
-            # if not read.flag & 2048 and read.aQual > aqual_threshold:
             if read.aQual > mapq_threshold and read.aligned:
 
                 ga_coverage[read.iv] += 1
@@ -91,8 +89,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
     Only consider alignments with matching positions from the beginning of the read.
     For read pairs with multiple alignments, pick the one with matching positions at the beginning.
 """
-def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshold, gap_threshold,
-                             start_threshold, outfile_base):
+def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshold, gap_threshold, outfile_base):
 
     output_filename = '{0}_coordinates.txt'.format(outfile_base)
 
@@ -120,15 +117,15 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
                 first_read, second_read = bundle[0]
                 if first_read.aligned:
                     if first_read.aQual >= mapq_threshold and not first_read.flag & 1024 and \
-                    (first_read.iv.strand == '+' and first_read.cigar[0].type == 'M') or \
-                    (first_read.iv.strand == '-' and first_read.cigar[-1].type == 'M'):
+                            ((first_read.iv.strand == '+' and first_read.cigar[0].type == 'M') or
+                                 (first_read.iv.strand == '-' and first_read.cigar[-1].type == 'M')):
                         first_read_chr = first_read.iv.chrom
                         first_read_position = first_read.iv.start_d
                         first_read_strand = first_read.iv.strand
                 if second_read.aligned:
                     if second_read.aQual >= mapq_threshold and not first_read.flag & 1024 and \
-                    (second_read.iv.strand == '+' and second_read.cigar[0].type == 'M') or \
-                    (second_read.iv.strand == '-' and second_read.cigar[-1].type == 'M'):
+                            ((second_read.iv.strand == '+' and second_read.cigar[0].type == 'M') or
+                                 (second_read.iv.strand == '-' and second_read.cigar[-1].type == 'M')):
                         second_read_chr = second_read.iv.chrom
                         second_read_position = second_read.iv.start_d
                         second_read_strand = second_read.iv.strand
@@ -184,7 +181,7 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
                 print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
                       first_read_strand, second_read_chr, second_read_position, second_read_strand, sep='\t', file=o)
 
-            last_pair_position = [ first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
+            last_pair_position = [first_read_chr, first_read_position, first_read_strand, second_read_chr, second_read_position, second_read_strand]
 
             read_count += 1
             if not read_count % 100000:
@@ -211,7 +208,7 @@ def find_windows(ga_windows, window_size):
 
 """ Find actual sequences of potential off-target sites
 """
-def output_alignments(ga, narrow_ga, ga_windows, reference_genome, target_sequence, target_name, target_cells,
+def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, target_name, target_cells,
                       bam_filename, mismatch_threshold, ga_pval, out):
 
     # dictionary to store the matched reads
@@ -226,7 +223,7 @@ def output_alignments(ga, narrow_ga, ga_windows, reference_genome, target_sequen
     # dictionary to store the unmatched reads
     unmatched_dict = {}
     
-    for iv,value in ga_windows.steps():
+    for iv, value in ga_windows.steps():
         if value:
             window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - 20, iv.end + 20)
 
@@ -555,12 +552,10 @@ def compare(ref, bam, control, targetsite, windowsize, mapq_threshold, gap_thres
         else:
             print("Tabulate nuclease standard start positions.", file=sys.stderr)
             nuclease_ga, nuclease_ga_windows, nuclease_ga_stranded, nuclease_ga_coverage, total_nuclease_count = \
-                tabulate_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold,
-                                                start_threshold, out + '_NUCLEASE')
+                tabulate_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold, out + '_NUCLEASE')
             print("Tabulate control standard start positions.", file=sys.stderr)
             control_ga, control_ga_windows, control_ga_stranded, control_ga_coverage, total_control_count = \
-                tabulate_start_positions(control, cells, name, targetsite, mapq_threshold, gap_threshold,
-                                                start_threshold, out + '_CONTROL')
+                tabulate_start_positions(control, cells, name, targetsite, mapq_threshold, gap_threshold, out + '_CONTROL')
 
         # For all positions with detected read mapping positions, put into a combined genomicArray
         for iv, value in nuclease_ga.steps():
@@ -632,8 +627,8 @@ def compare(ref, bam, control, targetsite, windowsize, mapq_threshold, gap_thres
 
         ga_consolidated_windows = find_windows(offtarget_ga_windows, windowsize)    # consolidate windows within 3 bp
 
-        output_alignments(nuclease_ga, ga_narrow_windows, ga_consolidated_windows, reference_genome,
-                          targetsite, name, cells, bam, mismatch_threshold, ga_pval, out)
+        output_alignments(ga_narrow_windows, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam,
+                          mismatch_threshold, ga_pval, out)
 
 
 def main():
