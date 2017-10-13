@@ -86,6 +86,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
 
     return ga, ga_windows, ga_stranded, ga_coverage, read_count
 
+
 """ Tabulate the start positions for the 2nd read in pair across the genome.
     Only consider alignments with matching positions from the beginning of the read.
     For read pairs with multiple alignments, pick the one with matching positions at the beginning.
@@ -277,9 +278,9 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                     matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute,
                                          iv.start, iv.end, name, read_count, iv, iv.chrom, window_sequence,
                                          offtarget_sequence_no_bulge, mismatches,
-                                         chosen_alignment_strand_m, start_no_bulge, end_no_bulge,
+                                         chosen_alignment_strand_m, mm_start, mm_end,
                                          bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
-                                         chosen_alignment_strand_b, bulged_start, bulged_end,
+                                         chosen_alignment_strand_b, b_start, b_end,
                                          filename, target_cells, full_name, target_name, target_sequence, realigned_target]
                 else:
                     current_read_count = reads_dict[tag]
@@ -290,9 +291,9 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                                          min(window_min[tag]), max(window_max[tag]), name, reads_dict[tag],
                                          iv, iv.chrom, window_sequence,
                                          offtarget_sequence_no_bulge, mismatches,
-                                         chosen_alignment_strand_m, start_no_bulge, end_no_bulge,
+                                         chosen_alignment_strand_m, mm_start, mm_end,
                                          bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
-                                         chosen_alignment_strand_b, bulged_start, bulged_end,
+                                         chosen_alignment_strand_b, b_start, b_end,
                                          filename, target_cells, full_name, target_name, target_sequence,
                                          realigned_target]
             else:
@@ -300,9 +301,9 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                 unmatched_dict[untag] = [iv.chrom, target_start_absolute, target_end_absolute,
                                          iv.start, iv.end, name, read_count, iv, iv.chrom,  window_sequence,
                                          offtarget_sequence_no_bulge, mismatches,
-                                         chosen_alignment_strand_m, start_no_bulge, end_no_bulge,
+                                         chosen_alignment_strand_m, mm_start, mm_end,
                                          bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
-                                         chosen_alignment_strand_b, bulged_start, bulged_end,
+                                         chosen_alignment_strand_b, b_start, b_end,
                                          filename, target_cells, full_name, target_name, target_sequence, 'none']
 
     # Write matched table
