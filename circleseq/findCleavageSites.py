@@ -281,7 +281,7 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                                          chosen_alignment_strand_m, mm_start, mm_end,
                                          bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
                                          chosen_alignment_strand_b, b_start, b_end,
-                                         filename, target_cells, full_name, target_name, target_sequence, realigned_target]
+                                         filename, target_cells, target_name, full_name, target_sequence, realigned_target]
                 else:
                     current_read_count = reads_dict[tag]
                     reads_dict[tag] = max(current_read_count, read_count) 
@@ -294,8 +294,7 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                                          chosen_alignment_strand_m, mm_start, mm_end,
                                          bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
                                          chosen_alignment_strand_b, b_start, b_end,
-                                         filename, target_cells, full_name, target_name, target_sequence,
-                                         realigned_target]
+                                         filename, target_cells, target_name, full_name, target_sequence, realigned_target]
             else:
                 untag = iv.chrom + ':' + str(iv.start)
                 unmatched_dict[untag] = [iv.chrom, target_start_absolute, target_end_absolute,
@@ -304,7 +303,7 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                                          chosen_alignment_strand_m, mm_start, mm_end,
                                          bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
                                          chosen_alignment_strand_b, b_start, b_end,
-                                         filename, target_cells, full_name, target_name, target_sequence, 'none']
+                                         filename, target_cells, target_name, full_name, target_sequence, 'none']
 
     # Write matched table
     print("Writing matched table", file=sys.stderr)
