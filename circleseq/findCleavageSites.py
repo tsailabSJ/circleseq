@@ -28,9 +28,8 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
     ga_coverage = HTSeq.GenomicArray("auto", stranded=False)
 
     read_count = 0
-    ref_chr = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
-                '20', '21', '22', 'X', 'Y']
 
+    pattern = regex.compile("^(chr|[0-9XY])")
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
@@ -68,7 +67,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
                             second_read_position = cigar_operation.ref_iv.start + distance
                             second_read_strand = '+'
 
-                if (first_read_chr == second_read_chr and first_read_chr in ref_chr and
+                if (first_read_chr == second_read_chr and pattern.match(str(first_read_chr)) and
                             first_read_position is not None and second_read_position is not None):
                     if abs(first_read_position - second_read_position) <= gap_threshold:
                         output = True
