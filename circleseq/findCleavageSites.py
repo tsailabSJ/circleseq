@@ -339,8 +339,6 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
     combined_ga = HTSeq.GenomicArray("auto", stranded=False) # Store the union of control and nuclease positions
     offtarget_ga_windows = HTSeq.GenomicArray("auto", stranded=False) # Store potential off-target sites
     ga_narrow_windows = HTSeq.GenomicArray("auto", stranded=False) # Store potential off-target sites narrow windows read counts
-    ga_left_control_50bp_windows = HTSeq.GenomicArray("auto", stranded=False) # Store left local control window read counts
-    ga_right_control_50bp_windows = HTSeq.GenomicArray("auto", stranded=False) # Store right local control window read counts
 
     bg_position = list() # List to store nuclease_position_counts that were observed at least once
     bg_narrow = list() # List to store the sum of nuclease_position_counts in the narrow window
@@ -362,15 +360,15 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
             control_ga, control_ga_windows, control_ga_stranded, control_ga_coverage, total_control_count = \
                 tabulate_merged_start_positions(control, cells, name, targetsite, mapq_threshold, gap_threshold,
                                                 start_threshold, out + '_CONTROL')
-        else:
-            print("Tabulate nuclease standard start positions.", file=sys.stderr)
-            nuclease_ga, nuclease_ga_windows, nuclease_ga_stranded, nuclease_ga_coverage, total_nuclease_count = \
-                tabulate_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold,
-                                                start_threshold, out + '_NUCLEASE')
-            print("Tabulate control standard start positions.", file=sys.stderr)
-            control_ga, control_ga_windows, control_ga_stranded, control_ga_coverage, total_control_count = \
-                tabulate_start_positions(control, cells, name, targetsite, mapq_threshold, gap_threshold,
-                                                start_threshold, out + '_CONTROL')
+        # else:
+        #     print("Tabulate nuclease standard start positions.", file=sys.stderr)
+        #     nuclease_ga, nuclease_ga_windows, nuclease_ga_stranded, nuclease_ga_coverage, total_nuclease_count = \
+        #         tabulate_start_positions(bam, cells, name, targetsite, mapq_threshold, gap_threshold,
+        #                                         start_threshold, out + '_NUCLEASE')
+        #     print("Tabulate control standard start positions.", file=sys.stderr)
+        #     control_ga, control_ga_windows, control_ga_stranded, control_ga_coverage, total_control_count = \
+        #         tabulate_start_positions(control, cells, name, targetsite, mapq_threshold, gap_threshold,
+        #                                         start_threshold, out + '_CONTROL')
 
         # For all positions with detected read mapping positions, put into a combined genomicArray
         for iv, value in nuclease_ga.steps():
@@ -400,10 +398,6 @@ def compare(ref, bam, control, targetsite, reads, windowsize, mapq_threshold, ga
                     # In the narrow (parameter-specified) window
                     nuclease_window_counts = sum(nuclease_ga[window])
                     control_window_counts = sum(control_ga[window])
-
-                    # In the surrounding area (left and right control windows) for background
-                    left_control_50bp_window_counts = sum(nuclease_ga[left_control_50bp_window])
-                    right_control_50bp_window_counts = sum(nuclease_ga[right_control_50bp_window])
 
                     # Store control_window_counts greater than zero
                     if control_window_counts >= 0:
