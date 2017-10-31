@@ -46,7 +46,7 @@ def alignReads(BWA_path, HG19_path, read1, read2, outfile):
     # Run paired end alignment against the genome
     logger.info('Running paired end mapping for {0}'.format(sample_name))
     bwa_alignment_command = '{0} mem {1} {2} {3} > {4}'.format(BWA_path, HG19_path, read1, read2, sam_filename)
-    samtools_sam_to_bam_command = 'samtools sort -o {0} {1}'.format(bam_filename, sam_filename)
+    samtools_sam_to_bam_command = 'samtools sort {1}    -f {0}'.format(bam_filename, sam_filename)
     samtools_index_command = 'samtools index {0}'.format(bam_filename)
     samtools_sort_by_name_command = 'samtools sort -o {0} -n {1}'.format("".join([base_name, '_sorted.bam']), bam_filename)
 
