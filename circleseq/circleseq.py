@@ -21,6 +21,7 @@ logger = log.createCustomLogger('root')
 class CircleSeq:
 
     def __init__(self):
+        self.window_sequence_search = 20
         self.window_size = 3
         self.mapq_threshold = 0
         self.start_threshold = 1
@@ -42,7 +43,9 @@ class CircleSeq:
             self.reference_genome = manifest_data['reference_genome']
             self.analysis_folder = manifest_data['analysis_folder']
 
-            # Allow the user to specify read threshold and windowsize if they'd like
+            # Allow the user to specify read threshold, window_size and window_sequence_search if they'd like
+            if 'window_sequence_search' in manifest_data:
+                self.window_sequence_search = manifest_data['window_sequence_search']
             if 'window_size' in manifest_data:
                 self.window_size = manifest_data['window_size']
             if 'mapq_threshold' in manifest_data:
@@ -147,9 +150,9 @@ class CircleSeq:
                     sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
                     control_sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '_sorted.bam')
                 identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample)
-                logger.info('Window: {0}, MAPQ: {1}, Gap: {2}, Start {3}, Mismatches {4}'.format(self.window_size, self.mapq_threshold, self.gap_threshold, self.start_threshold, self.mismatch_threshold))
+                logger.info('Window: {0}, MAPQ: {1}, Gap: {2}, Start {3}, Mismatches {4}, Window_Sequence_Search {5}'.format(self.window_size, self.mapq_threshold, self.gap_threshold, self.start_threshold, self.mismatch_threshold, self.window_sequence_search))
                 findCleavageSites.compare(self.reference_genome, sorted_bam_file, control_sorted_bam_file, self.samples[sample]['target'],
-                                          self.window_size, self.mapq_threshold, self.gap_threshold,
+                                          self.window_sequence_search, self.window_size, self.mapq_threshold, self.gap_threshold,
                                           self.start_threshold, self.mismatch_threshold, sample, self.samples[sample]['description'],
                                           identified_sites_file, merged=self.merged_analysis)
         except Exception as e:
