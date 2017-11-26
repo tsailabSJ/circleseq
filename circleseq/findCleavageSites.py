@@ -27,7 +27,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
 
     read_count = 0
     ref_chr = [str(x) for x in range(1, 23)] + ['X', 'Y'] + [''.join(['chr', str(x)]) for x in range(1, 23)] + \
-              ['chrX', 'chrY'] + ['2R', '3R', '2L', '3L', 'X', 'Y_unplaced', 'NM4g4']
+              ['chrX', 'chrY'] + ['2R', '3R', '2L', '3L', 'X', 'Y_unplaced', 'NM4g4', 'chrPCSK9KI']
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
@@ -104,7 +104,7 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
     read_count = 0
 
     ref_chr = [str(x) for x in range(1, 23)] + ['X', 'Y'] + [''.join(['chr', str(x)]) for x in range(1, 23)] + \
-              ['chrX', 'chrY'] + ['chrHHH'] + ['2R', '3R', '2L', '3L', 'X', 'Y_unplaced', 'NM4g4']
+              ['chrX', 'chrY'] + ['chrHHH'] + ['2R', '3R', '2L', '3L', 'X', 'Y_unplaced', 'NM4g4', 'chrPCSK9KI']
 
     with open(output_filename, 'w') as o:
         header = ['#Name', 'Targetsite_Sequence', 'Cells', 'BAM', 'Read1_chr', 'Read1_start_position', 'Read1_strand',
