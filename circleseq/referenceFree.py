@@ -2,11 +2,13 @@ from __future__ import print_function
 
 import argparse
 import itertools
+import regex
 import re
 import gzip
 import sys
 import collections
-from findCleavageSites import regexFromSequence, alignSequences, reverseComplement
+from findCleavageSites import regexFromSequence, alignSequences, reverseComplement, extendedPattern, realignedSequences
+
 """
 FASTQ generator function from umi package
 """
@@ -28,7 +30,7 @@ def fq(file):
 """
 Main function to find off-target sites in reference-free fashion
 """
-def analyze(fastq1_filename, fastq2_filename, targetsite, out_base, name='', cells=''):
+def analyze(fastq1_filename, fastq2_filename, targetsite, out_base, name='', cells='', mismatch_threshold=7):
 
     read_count = 0
     c = collections.Counter()
@@ -41,12 +43,19 @@ def analyze(fastq1_filename, fastq2_filename, targetsite, out_base, name='', cel
         r2_sequence = r2[1].rstrip('\n')
         joined_seq = reverseComplement(r1_sequence) + r2_sequence
         truncated_joined_seq = joined_seq[130:170]
-        offtarget, mismatch, length, strand, start, end, realigned_target = alignSequences(targetsite, truncated_joined_seq)
-        if offtarget:
-            # print(read_count, offtarget,mismatch,length)
-            c[offtarget] += 1
-            d[offtarget].append(joined_seq)
 
+        offtarget_sequence_no_bulge, mismatches, chosen_alignment_strand_m, start_no_bulge, end_no_bulge, \
+        bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, \
+        chosen_alignment_strand_b, bulged_start, bulged_end, realigned_target = \
+        alignSequences(targetsite, truncated_joined_seq, max_score=mismatch_threshold)
+
+        if offtarget_sequence_no_bulge:
+            c[offtarget_sequence_no_bulge] += 1
+            d[offtarget_sequence_no_bulge].append(joined_seq)
+        elif not offtarget_sequence_no_bulge and bulged_offtarget_sequence:
+            c[bulged_offtarget_sequence] += 1
+            d[bulged_offtarget_sequence].append(joined_seq)
+            
         read_count += 1
         if not read_count % 100000:
             print(read_count/float(1000000), end=" ", file=sys.stderr)
@@ -87,11 +96,11 @@ def main():
     parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
     parser.add_argument('--name', help='Targetsite Name', required=False)
     parser.add_argument('--cells', help='Cells', required=False)
+    parser.add_argument('--mismatch_threshold', help='Maximum score threshold', default=7, type=int)
     parser.add_argument('--out', help='Output file base', required=True)
     args = parser.parse_args()
 
-    analyze(args.fq1, args.fq2, args.targetsite, args.out, args.name, args.cells)
-    # join_write_output(args.fq1, args.fq2, args.out)
+    analyze(args.fq1, args.fq2, args.targetsite, args.out, args.name, args.cells, args.mismatch_threshold)
 
 if __name__ == "__main__":
     main()
