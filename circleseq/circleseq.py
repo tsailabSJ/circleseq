@@ -27,7 +27,8 @@ class CircleSeq:
         self.start_threshold = 1
         self.gap_threshold = 1
         self.mismatch_threshold = 6
-        self.merged_analysis = False
+        self.merged_analysis = True
+        self.all_chromosomes = False
 
     def parseManifest(self, manifest_path, sample='all'):
         logger.info('Loading manifest...')
@@ -58,6 +59,8 @@ class CircleSeq:
                 self.mismatch_threshold = manifest_data['mismatch_threshold']
             if 'merged_analysis' in manifest_data:
                 self.merged_analysis = manifest_data['merged_analysis']
+            if 'all_chromosomes' in manifest_data:
+                self.all_chromosomes = manifest_data['all_chromosomes']
 
             if sample == 'all':
                 self.samples = manifest_data['samples']
@@ -154,7 +157,7 @@ class CircleSeq:
                 findCleavageSites.compare(self.reference_genome, sorted_bam_file, control_sorted_bam_file, self.samples[sample]['target'],
                                           self.search_radius, self.window_size, self.mapq_threshold, self.gap_threshold,
                                           self.start_threshold, self.mismatch_threshold, sample, self.samples[sample]['description'],
-                                          identified_sites_file, merged=self.merged_analysis)
+                                          identified_sites_file, merged=self.merged_analysis, all_chromosomes=self.all_chromosomes)
         except Exception as e:
             logger.error('Error identifying off-target cleavage site.')
             logger.error(traceback.format_exc())
