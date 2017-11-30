@@ -55,7 +55,7 @@ def analyze(fastq1_filename, fastq2_filename, targetsite, out_base, name='', cel
         elif not offtarget_sequence_no_bulge and bulged_offtarget_sequence:
             c[bulged_offtarget_sequence] += 1
             d[bulged_offtarget_sequence].append(joined_seq)
-            
+
         read_count += 1
         if not read_count % 100000:
             print(read_count/float(1000000), end=" ", file=sys.stderr)

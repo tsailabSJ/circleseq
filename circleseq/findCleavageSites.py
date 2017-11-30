@@ -211,7 +211,7 @@ def find_windows(ga_windows, window_size):
 """ Find actual sequences of potential off-target sites
 """
 def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, target_name, target_cells,
-                      bam_filename, mismatch_threshold, ga_pval, window_sequence_search, out):
+                      bam_filename, mismatch_threshold, ga_pval, search_radius, out):
 
     # dictionary to store the matched reads
     matched_dict = {}   
@@ -227,7 +227,7 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
     
     for iv, value in ga_windows.steps():
         if value:
-            window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - window_sequence_search, iv.end + window_sequence_search)
+            window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - search_radius, iv.end + search_radius)
 
             offtarget_sequence_no_bulge, mismatches, chosen_alignment_strand_m, start_no_bulge, end_no_bulge, \
             bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, \
@@ -237,18 +237,18 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
             # get genomic coordinates of sequences
             mm_start, mm_end, b_start, b_end = '', '', '', ''
             if offtarget_sequence_no_bulge and chosen_alignment_strand_m == '+':
-                mm_start = iv.start - window_sequence_search + int(start_no_bulge)
-                mm_end = iv.start - window_sequence_search + int(end_no_bulge)
+                mm_start = iv.start - search_radius + int(start_no_bulge)
+                mm_end = iv.start - search_radius + int(end_no_bulge)
             if offtarget_sequence_no_bulge and chosen_alignment_strand_m == '-':
-                mm_start = iv.end + window_sequence_search - int(end_no_bulge)
-                mm_end = iv.end + window_sequence_search - int(start_no_bulge)
+                mm_start = iv.end + search_radius - int(end_no_bulge)
+                mm_end = iv.end + search_radius - int(start_no_bulge)
 
             if bulged_offtarget_sequence and chosen_alignment_strand_b == '+':
-                b_start = iv.start - window_sequence_search + int(bulged_start)
-                b_end = iv.start - window_sequence_search + int(bulged_end)
+                b_start = iv.start - search_radius + int(bulged_start)
+                b_end = iv.start - search_radius + int(bulged_end)
             if bulged_offtarget_sequence and chosen_alignment_strand_b == '-':
-                b_start = iv.end + window_sequence_search - int(bulged_end)
-                b_end = iv.end + window_sequence_search - int(bulged_start)
+                b_start = iv.end + search_radius - int(bulged_end)
+                b_end = iv.end + search_radius - int(bulged_start)
 
             #  define overall start and end position, only for annotation
             if offtarget_sequence_no_bulge and bulged_offtarget_sequence:
@@ -522,7 +522,7 @@ def get_sequence(reference_genome, chromosome, start, end, strand="+"):
     return str(seq)
 
 
-def compare(ref, bam, control, targetsite, window_sequence_search, windowsize, mapq_threshold, gap_threshold, start_threshold, mismatch_threshold, name,
+def compare(ref, bam, control, targetsite, search_radius, windowsize, mapq_threshold, gap_threshold, start_threshold, mismatch_threshold, name,
             cells, out, merged=False):
 
     output_list = list()
@@ -629,7 +629,7 @@ def compare(ref, bam, control, targetsite, window_sequence_search, windowsize, m
         ga_consolidated_windows = find_windows(offtarget_ga_windows, windowsize)    # consolidate windows within 3 bp
 
         output_alignments(ga_narrow_windows, ga_consolidated_windows, reference_genome, targetsite, name, cells, bam,
-                          mismatch_threshold, ga_pval, window_sequence_search, out)
+                          mismatch_threshold, ga_pval, search_radius, out)
 
 def main():
     parser = argparse.ArgumentParser(description='Identify off-target candidates from Illumina short read sequencing data.')
@@ -637,7 +637,7 @@ def main():
     parser.add_argument('--bam', help='Sorted BAM file', required=True)
     parser.add_argument('--control', help='Control BAM file', required=True)
     parser.add_argument('--targetsite', help='Targetsite Sequence', required=True)
-    parser.add_argument('--window_sequence_search', help='window_sequence_search', default=20, type=int)
+    parser.add_argument('--search_radius', help='Search radius around the position window', default=20, type=int)
     parser.add_argument('--windowsize', help='Windowsize', default=3, type=int)
     parser.add_argument('--mapq', help='mapq threshold', default=50, type=int)
     parser.add_argument('--gap', help='Gap threshold', default=3, type=int)
@@ -651,7 +651,7 @@ def main():
 
     # Run the comparison if the control bam is specified, otherwise run the standard site identification routine.
     print("Nuclease: {0}\nControl: {1}".format(args.bam, args.control), file=sys.stderr)
-    compare(args.ref, args.bam, args.control, args.targetsite, args.window_sequence_search, args.windowsize, args.mapq, args.gap,
+    compare(args.ref, args.bam, args.control, args.targetsite, args.search_radius, args.windowsize, args.mapq, args.gap,
             args.start, args.mismatch_threshold, args.name, args.cells, args.out, args.merged)
 
 if __name__ == "__main__":
