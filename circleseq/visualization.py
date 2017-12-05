@@ -69,19 +69,24 @@ def visualizeOfftargets(infile, outfile, title):
 
     # Draw ticks
     tick_locations = [1, len(target_seq)]  # limits
-    if target_seq.index('N') > len(target_seq)/2:  # PAM on the right end
-        tick_locations += range(len(target_seq) + 1)[::10][1:]  # intermediate values
-        tick_locations += range(len(target_seq) + 1)[len(target_seq) - 2: len(target_seq)]  # complementing PAM
-        tick_locations.sort()
-        tick_legend = [str(x) for x in tick_locations[:-3][::-1]] + ['P', 'A', 'M']
+    if target_seq.find('N') >= 0:
+        if target_seq.index('N') > len(target_seq)/2:  # PAM on the right end
+            tick_locations += range(len(target_seq) + 1)[::10][1:]  # intermediate values
+            tick_locations += range(len(target_seq) + 1)[len(target_seq) - 2: len(target_seq)]  # complementing PAM
+            tick_locations.sort()
+            tick_legend = [str(x) for x in tick_locations[:-3][::-1]] + ['P', 'A', 'M']
+        else:
+            tick_locations += [range(3, len(target_seq) + 1)[::10][1]]
+            tick_locations += range(2, 5)
+            tick_locations.sort()
+            tick_legend = ['P', 'A', 'M'] + [str(x) for x in [str(x-3) for x in tick_locations[3:]]]
+        for x, y in zip(tick_locations, tick_legend):
+            dwg.add(dwg.text(y, insert=(x_offset + (x - 1) * box_size + 2, y_offset - 2), style="font-size:10px; font-family:Courier"))
     else:
-        tick_locations += [range(3, len(target_seq) + 1)[::10][1]]
-        tick_locations += range(2, 5)
-        tick_locations.sort()
-        tick_legend = ['P', 'A', 'M'] + [str(x) for x in [str(x-3) for x in tick_locations[3:]]]
-
-    for x, y in zip(tick_locations, tick_legend):
-        dwg.add(dwg.text(y, insert=(x_offset + (x - 1) * box_size + 2, y_offset - 2), style="font-size:10px; font-family:Courier"))
+        tick_locations = [1, len(target_seq)]
+        tick_locations += range(len(target_seq) + 1)[::10][1:]
+        for x in tick_locations:
+            dwg.add(dwg.text(str(x), insert=(x_offset + (x - 1) * box_size + 2, y_offset - 2), style="font-size:10px; font-family:Courier"))
 
     # Draw reference sequence row
     for i, c in enumerate(target_seq):
@@ -89,7 +94,6 @@ def visualizeOfftargets(infile, outfile, title):
         x = x_offset + i * box_size
         dwg.add(dwg.rect((x, y), (box_size, box_size), fill=colors[c]))
         dwg.add(dwg.text(c, insert=(x + 3, y + box_size - 3), fill='black', style="font-size:15px; font-family:Courier"))
-
     dwg.add(dwg.text('Reads', insert=(x_offset + box_size * len(target_seq) + 16, y_offset + box_size - 3), style="font-size:15px; font-family:Courier"))
 
     # Draw aligned sequence rows
@@ -155,7 +159,6 @@ def visualizeOfftargets(infile, outfile, title):
                                   fill='black', style="font-size:23px; font-family:Courier")
             dwg.add(reads_text02)
     dwg.save()
-
 
 def main():
     parser = argparse.ArgumentParser(description='Plot visualization plots for re-aligned reads.')
