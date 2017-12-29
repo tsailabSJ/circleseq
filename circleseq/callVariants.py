@@ -128,16 +128,14 @@ def realignVariantBulge(bulge_sequence, window_sequence_variant, bulge_strand):
     return variant_bseq
 
 
-def SNPreader(snp_file, min_quality, max_reference, min_depth):
+def SNPreader(snp_file):
     ga = HTSeq.GenomicArray("auto", stranded=False, typecode='O')
 
     for snp in snp_file:
         basename, snpID, chromosome, one_based_position, reference, variant, quality, genotype, depth, PL = snp
-
-        if (float(quality) >= int(min_quality)) and (len(reference) <= int(max_reference)) and (int(depth) >= min_depth):
-            position = int(one_based_position) - 1
-            key = '_'.join([basename, chromosome])
-            ga[HTSeq.GenomicInterval(chromosome, position, position + 1, ".")] = [position, reference, variant, genotype, key]
+        position = int(one_based_position) - 1
+        key = '_'.join([basename, chromosome])
+        ga[HTSeq.GenomicInterval(chromosome, position, position + 1, ".")] = [position, reference, variant, genotype, quality, key]
     return ga
 
 
@@ -161,7 +159,7 @@ def arrayOffTargets(matched_file, search_radius):
     return offtargets_dict, gi_dict
 
 
-def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, min_quality=25, max_reference=5, min_depth=5, search_radius=20):
+def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius=20):
     output_file = open(out + '_Variants.txt', 'w')
     print('Chromosome', 'PositionStart', 'PositionEnd', 'Name', 'ReadCount',
           'WindowName', 'WindowChromosome', 'Variant_WindowSequence',
@@ -171,21 +169,22 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, min_quality=2
           'Variant_Site_GapsAllowed.Substitutions', 'Variant_Site_GapsAllowed.Insertions', 'Variant_Site_GapsAllowed.Deletions',
           'Variant_Site_GapsAllowed.Strand', 'Variant_Site_GapsAllowed.Start', 'Variant_Site_GapsAllowed.End',
           'FileName', 'Cell', 'Targetsite', 'FullName', 'TargetSequence', 'Variant_RealignedTargetSequence',
-          'Reference', 'Variant', 'Genotype',
+          'Reference', 'Variant', 'Genotype', 'Quality',
           sep='\t', file=output_file)
     output_file.close()
 
     basename = os.path.basename(out)
     offtargets, gi_offtargets = arrayOffTargets(matched_file, search_radius)
-    ga_snp = SNPreader(snp_file, min_quality, max_reference, min_depth)
+    ga_snp = SNPreader(snp_file)
 
     for name in offtargets:
+        variant_flag = False
         site = offtargets[name]
         gi = gi_offtargets[name]
 
         chromosome = site[0]
-        PositionStart = int(site[1])
-        PositionEnd = int(site[2])
+        PositionStart, PositionEnd = int(site[1]), int(site[2])
+        start_nb, end_nb, start_bu, end_bu = site[11], site[12], site[20], site[21]
         window_sequence = site[7]
         window_sequence = window_sequence.upper()
         fileName, cell, targetsite, fullName, TargetSequence = site[22:27]
@@ -198,7 +197,7 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, min_quality=2
 
         for i, v in ga_snp[gi].steps():
             if v:
-                position, reference, variant, genotype, key = v
+                position, reference, variant, genotype, quality, key = v
                 if key == wkey:
                     variant = variant.split(',')[0]
                     for n, pos in enumerate(range(gi.start, gi.end)):
@@ -207,7 +206,7 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, min_quality=2
                             insert_start.append(n)
                             end_pos = n + len(reference)
                             insert_end.append(end_pos)
-                            snp_data[str(position)] = [position, reference, variant, genotype]
+                            snp_data[str(position)] = [position, reference, variant, genotype, quality]
 
         tri = 0
         window_sequence_variant = ''
@@ -218,17 +217,17 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, min_quality=2
             tri = insert_end[i]
         window_sequence_variant += window_sequence[tri:]
 
-        #  get new off-target sequences
+        #  variant off-target sequences: only proceed if there is a variant in the window sequence
         window_sequence_var = window_sequence_variant.upper()
-
-        #  only proceed if there is a variant in the window sequence
-        if window_sequence_variant != window_sequence:
+        if window_sequence_var != window_sequence.upper():
             offtarget_sequence_no_bulge, mismatches, chosen_alignment_strand_m, start_no_bulge, end_no_bulge, \
             bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, \
             chosen_alignment_strand_b, bulged_start, bulged_end, realigned_target = \
                 alignSequences(TargetSequence, window_sequence_var, max_score=mismatch_threshold)
 
-            # get genomic coordinates of sequences
+            variant_ots_no_bulge, variant_ots_bulge = '', ''
+
+            #  get genomic coordinates of sequences
             mm_start, mm_end, b_start, b_end = '', '', '', ''
             if offtarget_sequence_no_bulge and chosen_alignment_strand_m == '+':
                 mm_start = PositionStart - search_radius + int(start_no_bulge)
@@ -244,59 +243,74 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, min_quality=2
                 b_start = PositionEnd + search_radius - int(bulged_end)
                 b_end = PositionEnd + search_radius - int(bulged_start)
 
-            # collect variant data if there are variant off-target sequences
-            total_genotype, total_reference, total_variant = '', '', ''
-            bk_mm, bk_bulge = [], []
-            variant_ots_no_bulge, variant_ots_bulge = '', ''
-            for pos in snp_data:
-                position, reference, variant, genotype = snp_data[pos]
-                if offtarget_sequence_no_bulge:
-                    if position >= mm_start and position < mm_end and position not in bk_mm:
+            #  collect variant data if there are changes in the coordinates of the updated off-target sequence(s)
+            if (start_nb and (int(start_nb) != mm_start or int(end_nb) != mm_end)) or (start_bu and (int(start_bu) != b_start or int(end_bu) != b_end)):
+                variant_flag = True
+                variant_ots_no_bulge, variant_ots_bulge = offtarget_sequence_no_bulge, bulged_offtarget_sequence
+
+            #  if any, obtain variant off-target-sequences
+            if offtarget_sequence_no_bulge and not bulged_offtarget_sequence:
+                if chosen_alignment_strand_m == '+':
+                    m_no_bulge = re.search(offtarget_sequence_no_bulge, window_sequence_variant, re.I)
+                else:
+                    m_no_bulge = re.search(offtarget_sequence_no_bulge, reverseComplement(window_sequence_variant), re.I)
+                variant_ots_no_bulge = m_no_bulge.group()
+                lower_start, upper_end = mm_start, mm_end
+            elif not offtarget_sequence_no_bulge and bulged_offtarget_sequence:
+                variant_ots_bulge = realignVariantBulge(bulged_offtarget_sequence, window_sequence_variant, chosen_alignment_strand_b)
+                lower_start, upper_end = b_start, b_end
+            elif offtarget_sequence_no_bulge and bulged_offtarget_sequence:
+                if chosen_alignment_strand_m == '+':
+                    m_no_bulge = re.search(offtarget_sequence_no_bulge, window_sequence_variant, re.I)
+                else:
+                    m_no_bulge = re.search(offtarget_sequence_no_bulge, reverseComplement(window_sequence_variant), re.I)
+                variant_ots_no_bulge = m_no_bulge.group()
+                variant_ots_bulge = realignVariantBulge(bulged_offtarget_sequence, window_sequence_variant, chosen_alignment_strand_b)
+                lower_start, upper_end = min(mm_start, b_start), max(mm_end, b_end)
+
+            #  collect variant data if we have variant off-target sequence(s)
+            if lower_start:
+                total_genotype, total_reference, total_variant, total_quality = '', '', '', ''
+                bk_mm, bk_bulge = [], []
+                for pos in snp_data:
+                    position, reference, variant, genotype, quality = snp_data[pos]
+
+                    if position >= lower_start and position < upper_end and position not in bk_mm:
+                        variant_flag = True
                         bk_mm.append(position)
                         if total_genotype != '':
                             total_genotype += ''.join([':', genotype])
                             total_reference += ''.join([':', reference])
                             total_variant += ''.join([':', variant])
+                            total_quality += ''.join([':', quality])
                         else:
                             total_genotype += ''.join([genotype])
                             total_reference += ''.join([reference])
                             total_variant += ''.join([variant])
-                        if chosen_alignment_strand_m == '+':
-                            m_no_bulge = re.search(offtarget_sequence_no_bulge, window_sequence_variant, re.I)
-                        else:
-                            m_no_bulge = re.search(offtarget_sequence_no_bulge, reverseComplement(window_sequence_variant), re.I)
-                        variant_ots_no_bulge = m_no_bulge.group()
+                            total_quality += ''.join([quality])
 
-                if bulged_offtarget_sequence:
-                    if position >= b_start and position < b_end and position not in bk_bulge:
-                        bk_bulge.append(position)
-                        if total_genotype != '':
-                            total_genotype += ''.join([':', genotype])
-                            total_reference += ''.join([':', reference])
-                            total_variant += ''.join([':', variant])
-                        else:
-                            total_genotype += ''.join([genotype])
-                            total_reference += ''.join([reference])
-                            total_variant += ''.join([variant])
-                        variant_ots_bulge = realignVariantBulge(bulged_offtarget_sequence, window_sequence_variant, chosen_alignment_strand_b)
-
-                #  in case the variant off-target sequence does not satisfy all the required thresholds
-                if not offtarget_sequence_no_bulge and not bulged_offtarget_sequence:
+            #  in case the variant off-target sequences do not satisfy all the required thresholds
+            if not offtarget_sequence_no_bulge and not bulged_offtarget_sequence:
+                variant_flag = True
+                for pos in snp_data:
+                    position, reference, variant, genotype, quality = snp_data[pos]
                     if total_genotype != '':
                         total_genotype += ''.join([':', genotype])
                         total_reference += ''.join([':', reference])
                         total_variant += ''.join([':', variant])
+                        total_quality += ''.join([':', quality])
                     else:
                         total_genotype += ''.join([genotype])
                         total_reference += ''.join([reference])
                         total_variant += ''.join([variant])
+                        total_quality += ''.join([quality])
 
-            #  only continue if there are changes in the off-target sequences
-            if total_genotype:
+            #  only report sites if there are changes in the off-target sequences
+            if variant_flag:
                 output02 = [variant_ots_no_bulge, mismatches, chosen_alignment_strand_m, str(mm_start), str(mm_end),
                             variant_ots_bulge, length, score, substitutions, insertions, deletions,
                             chosen_alignment_strand_b, str(b_start), str(b_end)]
-                output04 = [total_reference, total_variant, total_genotype]
+                output04 = [total_reference, total_variant, total_genotype, total_quality]
                 output_line = output01 + [window_sequence_variant] + output02 + output03 + [realigned_target] + output04
 
                 with open(out + '_Variants.txt', 'a') as output_file:
@@ -306,7 +320,7 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, min_quality=2
 """
 Main function
 """
-def callVariants(matched_file, ref, bam_file, out, search_radius, mismatch_threshold, min_quality=20, max_reference=10, min_depth=3):
+def getVariants(matched_file, ref, bam_file, out, search_radius, mismatch_threshold):
     basename = os.path.basename(out)
     output_folder = os.path.dirname(out)
     if not os.path.exists(output_folder):
@@ -315,23 +329,20 @@ def callVariants(matched_file, ref, bam_file, out, search_radius, mismatch_thres
     snp_file = snpCall(matched_file, ref, bam_file, out, search_radius)
 
     print('Obtaining Variant Off-Target Sequences for %s' % basename, file=sys.stderr)
-    snpAdjustment(matched_file, snp_file, out, mismatch_threshold, min_quality, max_reference, min_depth, search_radius)
+    snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius)
 
 
 def main():
     parser = argparse.ArgumentParser(description='Implement samtools:mpileup to identify genomic variants and adjust the off-target sequence when required.')
-    parser.add_argument("--matched_file", help="full_path_to/matched file in 'identified' folder", required=True)
+    parser.add_argument('--matched_file', help="full_path_to/matched file in 'identified' folder", required=True)
     parser.add_argument('--ref', help="Reference Genome Fasta", required=True)
     parser.add_argument('--bam', help="Sorted BAM file", required=True)
     parser.add_argument('--search_radius', help="Search radius around the position window", default=20, type=int)
     parser.add_argument('--mismatch_threshold', help='Maximum score threshold', default=7, type=int)
-    parser.add_argument('--minimum_quality', help="Minimum quality score from samtools:mpileup threshold", default=20, type=int)
-    parser.add_argument("--max_reference", help="Maximum reference size threshold", default=10)
-    parser.add_argument("--min_depth", help="Minimum number of reads from which the SNP assessment was taken.", default=3)
-    parser.add_argument('--out', help="Output file basename, with full path,", required=True)
+    parser.add_argument('--out', help="Output file basename, with full path", required=True)
     args = parser.parse_args()
 
-    callVariants(args.matched_file, args.ref, args.bam, args.out, args.search_radius, args.mismatch_threshold, args.minimum_quality, args.max_reference, args.min_depth)
+    getVariants(args.matched_file, args.ref, args.bam, args.out, args.search_radius, args.mismatch_threshold)
 
 if __name__ == "__main__":
     main()

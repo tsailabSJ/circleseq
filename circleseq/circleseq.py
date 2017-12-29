@@ -1,7 +1,6 @@
 """
 circleseq.py as the wrapper for CIRCLE-seq analysis
 """
-### 2017-October-11: Put "merged_analysis = False" as default; clean code of non-used parameters.
 
 from alignReads import alignReads
 from visualization import visualizeOfftargets
@@ -15,6 +14,7 @@ import log
 import yaml
 import validation
 import findCleavageSites
+import callVariants
 
 logger = log.createCustomLogger('root')
 
@@ -29,6 +29,7 @@ class CircleSeq:
         self.mismatch_threshold = 6
         self.merged_analysis = True
         self.all_chromosomes = False
+        self.variant_analysis = False
 
     def parseManifest(self, manifest_path, sample='all'):
         logger.info('Loading manifest...')
@@ -61,6 +62,8 @@ class CircleSeq:
                 self.merged_analysis = manifest_data['merged_analysis']
             if 'all_chromosomes' in manifest_data:
                 self.all_chromosomes = manifest_data['all_chromosomes']
+            if 'variant_analysis' in manifest_data:
+                self.variant_analysis = manifest_data['variant_analysis']
 
             if sample == 'all':
                 self.samples = manifest_data['samples']
@@ -68,7 +71,7 @@ class CircleSeq:
                 self.samples = {}
                 self.samples[sample] = manifest_data['samples'][sample]
             # Make folders for output
-            for folder in ['aligned', 'identified', 'fastq', 'visualization']:
+            for folder in ['aligned', 'identified', 'fastq', 'visualization', 'variants']:
                 output_folder = os.path.join(self.analysis_folder, folder)
                 if not os.path.exists(output_folder):
                     os.makedirs(output_folder)
@@ -179,6 +182,25 @@ class CircleSeq:
             logger.error('Error visualizing off-target sites.')
             logger.error(traceback.format_exc())
 
+    def callVariants(self):
+        logger.info('Identifying genomic variants')
+
+        try:
+            if self.variant_analysis:
+                for sample in self.samples:
+                    sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '.bam')
+                    identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample + '_identified_matched.txt')
+                    variants_basename = os.path.join(self.analysis_folder, 'variants', sample)
+                    logger.info('Mismatches {0}, Search_Radius {1}'.format(self.mismatch_threshold, self.search_radius))
+                    callVariants.getVariants(identified_sites_file, self.reference_genome, sorted_bam_file, variants_basename, self.search_radius, self.mismatch_threshold)
+
+                logger.info('Finished identifying genomic variants')
+
+        except Exception as e:
+            logger.error('Error identifying genomic variants.')
+            logger.error(traceback.format_exc())
+            quit()
+
     def parallel(self, manifest_path, lsf, run='all'):
         logger.info('Submitting parallel jobs')
         current_script = __file__
@@ -229,6 +251,10 @@ def parse_args():
     visualize_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
     visualize_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
 
+    variants_parser = subparsers.add_parser('variants', help='Run variants analysis only')
+    variants_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+    variants_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
+
     reference_free_parser = subparsers.add_parser('reference-free', help='Run reference-free discovery only')
     reference_free_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
     reference_free_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
@@ -244,6 +270,7 @@ def main():
         c.alignReads()
         c.findCleavageSites()
         c.visualize()
+        c.callVariants()
     elif args.command == 'parallel':
         c = CircleSeq()
         c.parseManifest(args.manifest)
@@ -264,6 +291,10 @@ def main():
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
         c.visualize()
+    elif args.command == 'variants':
+        c = CircleSeq()
+        c.parseManifest(args.manifest, args.sample)
+        c.callVariants()
 
 if __name__ == '__main__':
     main()

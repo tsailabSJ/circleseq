@@ -114,15 +114,13 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
                 first_read, second_read = bundle[0]
                 if first_read.aligned:
                     if first_read.aQual >= mapq_threshold and not first_read.flag & 1024 and \
-                            ((first_read.iv.strand == '+' and first_read.cigar[0].type == 'M') or
-                                 (first_read.iv.strand == '-' and first_read.cigar[-1].type == 'M')):
+                            ((first_read.iv.strand == '+' and first_read.cigar[0].type == 'M') or (first_read.iv.strand == '-' and first_read.cigar[-1].type == 'M')):
                         first_read_chr = first_read.iv.chrom
                         first_read_position = first_read.iv.start_d
                         first_read_strand = first_read.iv.strand
                 if second_read.aligned:
                     if second_read.aQual >= mapq_threshold and not first_read.flag & 1024 and \
-                            ((second_read.iv.strand == '+' and second_read.cigar[0].type == 'M') or
-                                 (second_read.iv.strand == '-' and second_read.cigar[-1].type == 'M')):
+                            ((second_read.iv.strand == '+' and second_read.cigar[0].type == 'M') or (second_read.iv.strand == '-' and second_read.cigar[-1].type == 'M')):
                         second_read_chr = second_read.iv.chrom
                         second_read_position = second_read.iv.start_d
                         second_read_strand = second_read.iv.strand
@@ -158,8 +156,8 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
                         second_read_strand = second_read.iv.strand
 
             if first_read_chr == second_read_chr and first_read_chr in ref_chr and \
-            ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position) <= gap_threshold)
-            or (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position) <= gap_threshold)):
+                    ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position) <= gap_threshold) or
+                         (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position) <= gap_threshold)):
 
                 # if first_read_chr in ref_chr and first_read_position and first_read_strand:
                 ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
@@ -366,7 +364,7 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
             un_control_pval_pos = min(un_control_pos_pval_list)
             un_control_pval_nar = min(un_control_nar_pval_list)
 
-            print(*(unrow + [un_pval_pos, un_pval_nar, un_control_pval_pos, un_control_pval_nar]), sep='\t', file=o2)
+            print(*([unrow[0]] + unrow[3:] + [un_pval_pos, un_pval_nar, un_control_pval_pos, un_control_pval_nar]), sep='\t', file=o2)
 
 
 """ Reverse complement DNA sequence
