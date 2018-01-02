@@ -225,7 +225,7 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius
             chosen_alignment_strand_b, bulged_start, bulged_end, realigned_target = \
                 alignSequences(TargetSequence, window_sequence_var, max_score=mismatch_threshold)
 
-            variant_ots_no_bulge, variant_ots_bulge = '', ''
+            variant_ots_no_bulge, variant_ots_bulge, lower_start = '', '', ''
 
             #  get genomic coordinates of sequences
             mm_start, mm_end, b_start, b_end = '', '', '', ''
