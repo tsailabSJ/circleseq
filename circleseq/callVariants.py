@@ -292,6 +292,7 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius
             #  in case the variant off-target sequences do not satisfy all the required thresholds
             if not offtarget_sequence_no_bulge and not bulged_offtarget_sequence:
                 variant_flag = True
+                total_genotype, total_reference, total_variant, total_quality = '', '', '', ''
                 for pos in snp_data:
                     position, reference, variant, genotype, quality = snp_data[pos]
                     if total_genotype != '':
