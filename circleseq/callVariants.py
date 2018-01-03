@@ -161,14 +161,14 @@ def arrayOffTargets(matched_file, search_radius):
 
 def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius=20):
     output_file = open(out + '_Variants.txt', 'w')
-    print('Chromosome', 'PositionStart', 'PositionEnd', 'Name', 'ReadCount',
-          'WindowName', 'WindowChromosome', 'Variant_WindowSequence',
+    print('Chromosome', 'Start', 'End', 'Name', 'ReadCount',
+          'Variant_WindowSequence',
           'Variant_Site_SubstitutionsOnly.Sequence', 'Variant_Site_SubstitutionsOnly.NumSubstitutions',
-          'Variant_Site_SubstitutionsOnly.Strand', 'Variant_Site_SubstitutionsOnly.Start', 'Variant_Site_SubstitutionsOnly.End',
+          'Variant_Site_SubstitutionsOnly.Strand',
           'Variant_Site_GapsAllowed.Sequence', 'Variant_Site_GapsAllowed.Length', 'Variant_Site_GapsAllowed.Score',
           'Variant_Site_GapsAllowed.Substitutions', 'Variant_Site_GapsAllowed.Insertions', 'Variant_Site_GapsAllowed.Deletions',
-          'Variant_Site_GapsAllowed.Strand', 'Variant_Site_GapsAllowed.Start', 'Variant_Site_GapsAllowed.End',
-          'FileName', 'Cell', 'Targetsite', 'FullName', 'TargetSequence', 'Variant_RealignedTargetSequence',
+          'Variant_Site_GapsAllowed.Strand',
+          'Cell', 'Targetsite', 'TargetSequence', 'Variant_RealignedTargetSequence',
           'Reference', 'Variant', 'Genotype', 'Quality',
           sep='\t', file=output_file)
     output_file.close()
@@ -183,13 +183,13 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius
         gi = gi_offtargets[name]
 
         chromosome = site[0]
-        PositionStart, PositionEnd = int(site[1]), int(site[2])
-        start_nb, end_nb, start_bu, end_bu = site[11], site[12], site[20], site[21]
         window_sequence = site[7]
         window_sequence = window_sequence.upper()
-        fileName, cell, targetsite, fullName, TargetSequence = site[22:27]
-        output01 = site[0:7]
-        output03 = [fileName, cell, targetsite, fullName, TargetSequence]
+        cell, targetsite = site[23:25]
+        TargetSequence = site[26]
+        output01 = site[0:5]
+        output03 = [cell, targetsite, TargetSequence]
+        ots_nb, ots_bu = site[8], site[13]
 
         #  obtain variant window sequence
         wkey = '_'.join([basename, chromosome])
@@ -219,79 +219,29 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius
 
         #  variant off-target sequences: only proceed if there is a variant in the window sequence
         window_sequence_var = window_sequence_variant.upper()
-        if window_sequence_var != window_sequence.upper():
+        if window_sequence_var != window_sequence:
             offtarget_sequence_no_bulge, mismatches, chosen_alignment_strand_m, start_no_bulge, end_no_bulge, \
             bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, \
             chosen_alignment_strand_b, bulged_start, bulged_end, realigned_target = \
                 alignSequences(TargetSequence, window_sequence_var, max_score=mismatch_threshold)
 
-            variant_ots_no_bulge, variant_ots_bulge, lower_start = '', '', ''
+            variant_ots_no_bulge, variant_ots_bulge = '', ''
 
-            #  get genomic coordinates of sequences
-            mm_start, mm_end, b_start, b_end = '', '', '', ''
-            if offtarget_sequence_no_bulge and chosen_alignment_strand_m == '+':
-                mm_start = PositionStart - search_radius + int(start_no_bulge)
-                mm_end = PositionStart - search_radius + int(end_no_bulge)
-            if offtarget_sequence_no_bulge and chosen_alignment_strand_m == '-':
-                mm_start = PositionEnd + search_radius - int(end_no_bulge)
-                mm_end = PositionEnd + search_radius - int(start_no_bulge)
-
-            if bulged_offtarget_sequence and chosen_alignment_strand_b == '+':
-                b_start = PositionStart - search_radius + int(bulged_start)
-                b_end = PositionStart - search_radius + int(bulged_end)
-            if bulged_offtarget_sequence and chosen_alignment_strand_b == '-':
-                b_start = PositionEnd + search_radius - int(bulged_end)
-                b_end = PositionEnd + search_radius - int(bulged_start)
-
-            #  collect variant data if there are changes in the coordinates of the updated off-target sequence(s)
-            if (start_nb and (int(start_nb) != mm_start or int(end_nb) != mm_end)) or (start_bu and (int(start_bu) != b_start or int(end_bu) != b_end)):
+            #  get variant sequence if the off-target sequences changed by considering the variant window
+            if ots_nb != offtarget_sequence_no_bulge:
                 variant_flag = True
-                variant_ots_no_bulge, variant_ots_bulge = offtarget_sequence_no_bulge, bulged_offtarget_sequence
-
-            #  if any, obtain variant off-target-sequences
-            if offtarget_sequence_no_bulge and not bulged_offtarget_sequence:
                 if chosen_alignment_strand_m == '+':
                     m_no_bulge = re.search(offtarget_sequence_no_bulge, window_sequence_variant, re.I)
                 else:
                     m_no_bulge = re.search(offtarget_sequence_no_bulge, reverseComplement(window_sequence_variant), re.I)
                 variant_ots_no_bulge = m_no_bulge.group()
-                lower_start, upper_end = mm_start, mm_end
-            elif not offtarget_sequence_no_bulge and bulged_offtarget_sequence:
-                variant_ots_bulge = realignVariantBulge(bulged_offtarget_sequence, window_sequence_variant, chosen_alignment_strand_b)
-                lower_start, upper_end = b_start, b_end
-            elif offtarget_sequence_no_bulge and bulged_offtarget_sequence:
-                if chosen_alignment_strand_m == '+':
-                    m_no_bulge = re.search(offtarget_sequence_no_bulge, window_sequence_variant, re.I)
-                else:
-                    m_no_bulge = re.search(offtarget_sequence_no_bulge, reverseComplement(window_sequence_variant), re.I)
-                variant_ots_no_bulge = m_no_bulge.group()
-                variant_ots_bulge = realignVariantBulge(bulged_offtarget_sequence, window_sequence_variant, chosen_alignment_strand_b)
-                lower_start, upper_end = min(mm_start, b_start), max(mm_end, b_end)
 
-            #  collect variant data if we have variant off-target sequence(s)
-            if lower_start:
-                total_genotype, total_reference, total_variant, total_quality = '', '', '', ''
-                bk_mm, bk_bulge = [], []
-                for pos in snp_data:
-                    position, reference, variant, genotype, quality = snp_data[pos]
-
-                    if position >= lower_start and position < upper_end and position not in bk_mm:
-                        variant_flag = True
-                        bk_mm.append(position)
-                        if total_genotype != '':
-                            total_genotype += ''.join([':', genotype])
-                            total_reference += ''.join([':', reference])
-                            total_variant += ''.join([':', variant])
-                            total_quality += ''.join([':', quality])
-                        else:
-                            total_genotype += ''.join([genotype])
-                            total_reference += ''.join([reference])
-                            total_variant += ''.join([variant])
-                            total_quality += ''.join([quality])
-
-            #  in case the variant off-target sequences do not satisfy all the required thresholds
-            if not offtarget_sequence_no_bulge and not bulged_offtarget_sequence:
+            if ots_bu != bulged_offtarget_sequence:
                 variant_flag = True
+                variant_ots_bulge = realignVariantBulge(bulged_offtarget_sequence, window_sequence_variant, chosen_alignment_strand_b)
+
+            # collect and write variant data if we have variant off-target sequence(s)
+            if variant_flag:
                 total_genotype, total_reference, total_variant, total_quality = '', '', '', ''
                 for pos in snp_data:
                     position, reference, variant, genotype, quality = snp_data[pos]
@@ -306,11 +256,8 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius
                         total_variant += ''.join([variant])
                         total_quality += ''.join([quality])
 
-            #  only report sites if there are changes in the off-target sequences
-            if variant_flag:
-                output02 = [variant_ots_no_bulge, mismatches, chosen_alignment_strand_m, str(mm_start), str(mm_end),
-                            variant_ots_bulge, length, score, substitutions, insertions, deletions,
-                            chosen_alignment_strand_b, str(b_start), str(b_end)]
+                output02 = [variant_ots_no_bulge, mismatches, chosen_alignment_strand_m,
+                            variant_ots_bulge, length, substitutions, insertions, deletions, chosen_alignment_strand_b]
                 output04 = [total_reference, total_variant, total_genotype, total_quality]
                 output_line = output01 + [window_sequence_variant] + output02 + output03 + [realigned_target] + output04
 

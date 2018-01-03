@@ -65,6 +65,11 @@ class CircleSeq:
             if 'variant_analysis' in manifest_data:
                 self.variant_analysis = manifest_data['variant_analysis']
 
+            # Do not allow to run variant_analysis with merged_analysis
+            if self.merged_analysis and self.variant_analysis:
+                logger.error('merged_analysis is not compatible with variant_analysis. Please remove one option.')
+                sys.exit()
+
             if sample == 'all':
                 self.samples = manifest_data['samples']
             else:
@@ -233,7 +238,7 @@ def parse_args():
     parallel_parser = subparsers.add_parser('parallel', help='Run all steps of the pipeline in parallel')
     parallel_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
     parallel_parser.add_argument('--lsf', '-l', help='Specify LSF CMD', default='bsub -q medium')
-    parallel_parser.add_argument('--run', '-r', help='Specify which steps of pipepline to run (all, align, identify, visualize)', default='all')
+    parallel_parser.add_argument('--run', '-r', help='Specify which steps of pipepline to run (all, align, identify, visualize, variants)', default='all')
 
     align_parser = subparsers.add_parser('align', help='Run alignment only')
     align_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
