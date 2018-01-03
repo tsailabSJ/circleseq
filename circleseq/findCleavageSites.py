@@ -583,6 +583,7 @@ def compare(ref, bam, control, targetsite, search_radius, windowsize, mapq_thres
                     # In the narrow (parameter-specified) window
                     nuclease_window_counts = sum(nuclease_ga[window])
                     control_window_counts = sum(control_ga[window])
+
                     # Store control_window_counts greater than zero
                     if control_window_counts >= 0:
                         bg_narrow.append(control_window_counts)
@@ -596,7 +597,7 @@ def compare(ref, bam, control, targetsite, search_radius, windowsize, mapq_thres
               'Nuclease_Window_Reads', 'Control_Window_Reads',
               'p_Value', 'narrow_p_Value', 'control_p_Value', 'control_narrow_p_Value', file=o, sep='\t')
 
-        # Empiricals cdf
+        # Empirical cdf
         ecdf_pos = statsmodels.distributions.empirical_distribution.ECDF(bg_position)
         ecdf_nar = statsmodels.distributions.empirical_distribution.ECDF(bg_narrow)
 
