@@ -159,7 +159,7 @@ def arrayOffTargets(matched_file, search_radius):
     return offtargets_dict, gi_dict
 
 
-def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius=20):
+def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius):
     output_file = open(out + '_Variants.txt', 'w')
     print('Chromosome', 'Start', 'End', 'Name', 'ReadCount',
           'Variant_WindowSequence',

@@ -8,13 +8,12 @@ import regex
 import statsmodels
 import sys
 
-### 2017-October-11: Remove computation and storing of p-values not in use; use corrected (symmetric) alignment.
 
 """ Tabulate merged start positions.
     Identify genomic coordinates for reads mapping across 151/152 bp position.
     Add positions to genomic array.
 """
-def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, outfile_base, pattern, all_chromosomes=False):
+def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_threshold, gap_threshold, start_threshold, outfile_base, pattern, all_chromosomes):
     output_filename = '{0}_coordinates.txt'.format(outfile_base)
 
     sorted_bam_file = HTSeq.BAM_Reader(BamFileName)
@@ -62,7 +61,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
                             second_read_position = cigar_operation.ref_iv.start + distance
                             second_read_strand = '+'
 
-                if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)) or all_chromosomes) and \
+                if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)) or (all_chromosomes and first_read_chr)) and \
                                 first_read_position is not None and second_read_position is not None:
                     if abs(first_read_position - second_read_position) <= gap_threshold:
                         output = True
@@ -89,7 +88,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
     Only consider alignments with matching positions from the beginning of the read.
     For read pairs with multiple alignments, pick the one with matching positions at the beginning.
 """
-def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshold, gap_threshold, outfile_base, pattern, all_chromosomes=False):
+def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshold, gap_threshold, outfile_base, pattern, all_chromosomes):
 
     output_filename = '{0}_coordinates.txt'.format(outfile_base)
 
@@ -155,7 +154,7 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
                         second_read_position = second_read.iv.start_d
                         second_read_strand = second_read.iv.strand
 
-            if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)) or all_chromosomes) and \
+            if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)) or (all_chromosomes and first_read_chr)) and \
                     ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position) <= gap_threshold) or
                          (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position) <= gap_threshold)):
 
@@ -404,14 +403,14 @@ def regexFromSequence(seq, lookahead=True, indels=1, errors=7):
     return pattern_standard, pattern_gap
 
 
-def extendedPattern(seq, indels=1, errors=7):
+def extendedPattern(seq, errors, indels=1):
     IUPAC_notation_regex_extended = {'N': '[ATCGN]','-': '[ATCGN]','Y': '[CTY]','R': '[AGR]','W': '[ATW]','S': '[CGS]','A': 'A','T': 'T','C': 'C','G': 'G'}
     realign_pattern = ''
     for c in seq:
         realign_pattern += IUPAC_notation_regex_extended[c]
     return '(?b:' + realign_pattern + ')' + '{{i<={0},d<={0},s<={1},3i+3d+1s<={1}}}'.format(indels, errors)
 
-def realignedSequences(targetsite_sequence, chosen_alignment, errors=7):
+def realignedSequences(targetsite_sequence, chosen_alignment, errors):
     match_sequence = chosen_alignment.group()
     substitutions, insertions, deletions = chosen_alignment.fuzzy_counts
 
@@ -516,12 +515,12 @@ def get_sequence(reference_genome, chromosome, start, end, strand="+"):
 
 
 def compare(ref, bam, control, targetsite, search_radius, windowsize, mapq_threshold, gap_threshold, start_threshold, mismatch_threshold, name,
-            cells, out, merged=True, all_chromosomes=False):
+            cells, out, all_chromosomes, merged=True):
 
     output_list = list()
 
     reference_genome = pyfaidx.Fasta(ref)
-    pattern = regex.compile("^(chr|[0-9XY])")
+    pattern = regex.compile("^[^_]*[0-9XYM]*[^_]*$")
 
     combined_ga = HTSeq.GenomicArray("auto", stranded=False)  # Store the union of control and nuclease positions
     offtarget_ga_windows = HTSeq.GenomicArray("auto", stranded=False)  # Store potential off-target sites
@@ -649,7 +648,7 @@ def main():
     # Run the comparison if the control bam is specified, otherwise run the standard site identification routine.
     print("Nuclease: {0}\nControl: {1}".format(args.bam, args.control), file=sys.stderr)
     compare(args.ref, args.bam, args.control, args.targetsite, args.search_radius, args.windowsize, args.mapq, args.gap,
-            args.start, args.mismatch_threshold, args.name, args.cells, args.out, args.merged, args.all_chromosomes)
+            args.start, args.mismatch_threshold, args.name, args.cells, args.out, args.all_chromosomes, args.merged)
 
 if __name__ == "__main__":
     main()
