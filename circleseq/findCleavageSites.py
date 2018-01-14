@@ -61,7 +61,7 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
                             second_read_position = cigar_operation.ref_iv.start + distance
                             second_read_strand = '+'
 
-                if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)) or (all_chromosomes)) and \
+                if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)) or all_chromosomes) and \
                                 first_read_position is not None and second_read_position is not None:
                     if abs(first_read_position - second_read_position) <= gap_threshold:
                         output = True
