@@ -8,12 +8,12 @@ This is a repository for CIRCLE-seq analytical software, which takes sample-spec
 - [Getting Set Up](#setup)
 	- [Installing Dependencies](#install_dependencies)
 	- [Download Reference Genome](#reference_genome)
-	- [Download and Set Up guideseq](#circleseq_setup)
+	- [Download and Set Up circleseq](#circleseq_setup)
 - [Usage](#usage)
 	- [Quickstart](#quickstart)
 	- [Writing A Manifest File](#write_manifest)
 	- [Pipeline Outputs](#pipeline_output)
-- [Testing the guideseq Package](#testing)
+- [Testing the circleseq Package](#testing)
 - [Frequently Asked Questions](#FAQ)
 
 ## Features<a name="features"></a>

@@ -14,19 +14,22 @@ import log
 import yaml
 import validation
 import findCleavageSites
+import callVariants
 
 logger = log.createCustomLogger('root')
 
 class CircleSeq:
 
     def __init__(self):
-        self.read_threshold = 4
+        self.search_radius = 20
         self.window_size = 3
         self.mapq_threshold = 0
         self.start_threshold = 1
         self.gap_threshold = 1
         self.mismatch_threshold = 6
         self.merged_analysis = True
+        self.all_chromosomes = False
+        self.variant_analysis = False
 
     def parseManifest(self, manifest_path, sample='all'):
         logger.info('Loading manifest...')
@@ -42,9 +45,9 @@ class CircleSeq:
             self.reference_genome = manifest_data['reference_genome']
             self.analysis_folder = manifest_data['analysis_folder']
 
-            # Allow the user to specify read threshold and windowsize if they'd like
-            if 'read_threshold' in manifest_data:
-                self.read_threshold = manifest_data['read_threshold']
+            # Allow the user to specify read threshold, window_size and search_radius if they'd like
+            if 'search_radius' in manifest_data:
+                self.search_radius = manifest_data['search_radius']
             if 'window_size' in manifest_data:
                 self.window_size = manifest_data['window_size']
             if 'mapq_threshold' in manifest_data:
@@ -57,6 +60,15 @@ class CircleSeq:
                 self.mismatch_threshold = manifest_data['mismatch_threshold']
             if 'merged_analysis' in manifest_data:
                 self.merged_analysis = manifest_data['merged_analysis']
+            if 'all_chromosomes' in manifest_data:
+                self.all_chromosomes = manifest_data['all_chromosomes']
+            if 'variant_analysis' in manifest_data:
+                self.variant_analysis = manifest_data['variant_analysis']
+
+            # Do not allow to run variant_analysis with merged_analysis
+            if self.merged_analysis and self.variant_analysis:
+                logger.error('merged_analysis is not compatible with variant_analysis. Please remove one option.')
+                sys.exit()
 
             if sample == 'all':
                 self.samples = manifest_data['samples']
@@ -64,7 +76,7 @@ class CircleSeq:
                 self.samples = {}
                 self.samples[sample] = manifest_data['samples'][sample]
             # Make folders for output
-            for folder in [ 'aligned', 'identified', 'fastq', 'visualization' ]:
+            for folder in ['aligned', 'identified', 'fastq', 'visualization', 'variants']:
                 output_folder = os.path.join(self.analysis_folder, folder)
                 if not os.path.exists(output_folder):
                     os.makedirs(output_folder)
@@ -149,12 +161,11 @@ class CircleSeq:
                     sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '_sorted.bam')
                     control_sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', 'control_' + sample + '_sorted.bam')
                 identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample)
-                logger.info('Reads: {0}, Window: {1}, MAPQ: {2}, Gap: {3}, Start {4}, Mismatches {5}'.format(self.read_threshold,
-                     self.window_size, self.mapq_threshold, self.gap_threshold, self.start_threshold, self.mismatch_threshold))
+                logger.info('Window: {0}, MAPQ: {1}, Gap: {2}, Start {3}, Mismatches {4}, Search_Radius {5}'.format(self.window_size, self.mapq_threshold, self.gap_threshold, self.start_threshold, self.mismatch_threshold, self.search_radius))
                 findCleavageSites.compare(self.reference_genome, sorted_bam_file, control_sorted_bam_file, self.samples[sample]['target'],
-                                          self.read_threshold, self.window_size, self.mapq_threshold, self.gap_threshold,
+                                          self.search_radius, self.window_size, self.mapq_threshold, self.gap_threshold,
                                           self.start_threshold, self.mismatch_threshold, sample, self.samples[sample]['description'],
-                                          identified_sites_file, merged=self.merged_analysis)
+                                          identified_sites_file, self.all_chromosomes, merged=self.merged_analysis)
         except Exception as e:
             logger.error('Error identifying off-target cleavage site.')
             logger.error(traceback.format_exc())
@@ -176,6 +187,26 @@ class CircleSeq:
             logger.error('Error visualizing off-target sites.')
             logger.error(traceback.format_exc())
 
+    def callVariants(self):
+
+        try:
+            if self.variant_analysis:
+                logger.info('Identifying genomic variants')
+
+                for sample in self.samples:
+                    sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '.bam')
+                    identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample + '_identified_matched.txt')
+                    variants_basename = os.path.join(self.analysis_folder, 'variants', sample)
+                    logger.info('Mismatches {0}, Search_Radius {1}'.format(self.mismatch_threshold, self.search_radius))
+                    callVariants.getVariants(identified_sites_file, self.reference_genome, sorted_bam_file, variants_basename, self.search_radius, self.mismatch_threshold)
+
+                logger.info('Finished identifying genomic variants')
+
+        except Exception as e:
+            logger.error('Error identifying genomic variants.')
+            logger.error(traceback.format_exc())
+            quit()
+
     def parallel(self, manifest_path, lsf, run='all'):
         logger.info('Submitting parallel jobs')
         current_script = __file__
@@ -194,7 +225,6 @@ class CircleSeq:
     def referenceFree(self):
         pass
 
-
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -208,8 +238,8 @@ def parse_args():
 
     parallel_parser = subparsers.add_parser('parallel', help='Run all steps of the pipeline in parallel')
     parallel_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
-    parallel_parser.add_argument('--lsf', '-l', help='Specify LSF CMD', default='bsub -R rusage[mem=8000] -q normal -P Genomics')
-    parallel_parser.add_argument('--run', '-r', help='Specify which steps of pipepline to run (all, align, identify, visualize)', default='all')
+    parallel_parser.add_argument('--lsf', '-l', help='Specify LSF CMD', default='bsub -R rusage[mem=8000]')
+    parallel_parser.add_argument('--run', '-r', help='Specify which steps of pipepline to run (all, align, identify, visualize, variants)', default='all')
 
     align_parser = subparsers.add_parser('align', help='Run alignment only')
     align_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
@@ -227,6 +257,10 @@ def parse_args():
     visualize_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
     visualize_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
 
+    variants_parser = subparsers.add_parser('variants', help='Run variants analysis only')
+    variants_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
+    variants_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
+
     reference_free_parser = subparsers.add_parser('reference-free', help='Run reference-free discovery only')
     reference_free_parser.add_argument('--manifest', '-m', help='Specify the manifest Path', required=True)
     reference_free_parser.add_argument('--sample', '-s', help='Specify sample to process (default is all)', default='all')
@@ -240,9 +274,9 @@ def main():
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
         c.alignReads()
-        # c.mergeAlignReads()
         c.findCleavageSites()
         c.visualize()
+        c.callVariants()
     elif args.command == 'parallel':
         c = CircleSeq()
         c.parseManifest(args.manifest)
@@ -263,6 +297,10 @@ def main():
         c = CircleSeq()
         c.parseManifest(args.manifest, args.sample)
         c.visualize()
+    elif args.command == 'variants':
+        c = CircleSeq()
+        c.parseManifest(args.manifest, args.sample)
+        c.callVariants()
 
 if __name__ == '__main__':
     main()
