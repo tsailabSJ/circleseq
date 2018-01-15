@@ -24,7 +24,8 @@ def snpCall(matched_file, reference, bam_file, out, search_radius):
         f.readline()
         for line in f:
             site = line.strip().split('\t')
-            regions.append([site[0], int(site[1]) - search_radius, int(site[2]) + search_radius, '*', bam_file, '_'.join([site[24], site[3]])])
+            #  site tag defined as Targetsite_Name
+            regions.append([site[0], int(site[1]) - search_radius, int(site[2]) + search_radius, '*', bam_file, '_'.join([site[26], site[3]])])
 
     print('Running samtools:mpileup for %s' % basename, file=sys.stderr)
     out_vcf = os.path.join(output_folder, basename + '_mpileup_output')
@@ -161,7 +162,7 @@ def arrayOffTargets(matched_file, search_radius):
 
 def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius):
     output_file = open(out + '_Variants.txt', 'w')
-    print('Chromosome', 'Start', 'End', 'Name', 'ReadCount',
+    print('Chromosome', 'Start', 'End', 'Name', 'ReadCount', 'Strand',
           'Variant_WindowSequence',
           'Variant_Site_SubstitutionsOnly.Sequence', 'Variant_Site_SubstitutionsOnly.NumSubstitutions',
           'Variant_Site_SubstitutionsOnly.Strand',
@@ -183,13 +184,13 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius
         gi = gi_offtargets[name]
 
         chromosome = site[0]
-        window_sequence = site[7]
+        window_sequence = site[9]
         window_sequence = window_sequence.upper()
-        cell, targetsite = site[23:25]
-        TargetSequence = site[26]
-        output01 = site[0:5]
+        cell, targetsite = site[25:27]
+        TargetSequence = site[28]
+        output01 = site[0:6]
         output03 = [cell, targetsite, TargetSequence]
-        ots_nb, ots_bu = site[8], site[13]
+        ots_nb, ots_bu = site[10], site[15]
 
         #  obtain variant window sequence
         wkey = '_'.join([basename, chromosome])

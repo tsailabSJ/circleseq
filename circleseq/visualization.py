@@ -25,10 +25,10 @@ def parseSitesFile(infile):
             line = line.rstrip('\n')
             line_items = line.split('\t')
             offtarget_reads = line_items[4]
-            no_bulge_offtarget_sequence = line_items[8]
-            bulge_offtarget_sequence = line_items[13]
-            target_seq = line_items[26]
-            realigned_target_seq = line_items[27]
+            no_bulge_offtarget_sequence = line_items[10]
+            bulge_offtarget_sequence = line_items[15]
+            target_seq = line_items[28]
+            realigned_target_seq = line_items[29]
 
             if no_bulge_offtarget_sequence != '' or bulge_offtarget_sequence != '':
                 if no_bulge_offtarget_sequence:
