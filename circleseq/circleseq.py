@@ -188,10 +188,11 @@ class CircleSeq:
             logger.error(traceback.format_exc())
 
     def callVariants(self):
-        logger.info('Identifying genomic variants')
 
         try:
             if self.variant_analysis:
+                logger.info('Identifying genomic variants')
+
                 for sample in self.samples:
                     sorted_bam_file = os.path.join(self.analysis_folder, 'aligned', sample + '.bam')
                     identified_sites_file = os.path.join(self.analysis_folder, 'identified', sample + '_identified_matched.txt')
