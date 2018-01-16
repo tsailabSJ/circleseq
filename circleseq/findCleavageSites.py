@@ -289,7 +289,7 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                                          filename, target_cells, target_name, full_name, target_sequence, realigned_target]
             else:
                 untag = iv.chrom + ':' + str(iv.start)
-                unmatched_dict[untag] = [iv.chrom, target_start_absolute, target_strand_absolute, name, read_count, target_end_absolute,
+                unmatched_dict[untag] = [iv.chrom, target_start_absolute, target_end_absolute, name, read_count, target_strand_absolute,
                                          iv.start, iv.end, iv, window_sequence,
                                          offtarget_sequence_no_bulge, mismatches,
                                          chosen_alignment_strand_m, mm_start, mm_end,
