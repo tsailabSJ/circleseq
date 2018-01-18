@@ -61,17 +61,18 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
                             second_read_position = cigar_operation.ref_iv.start + distance
                             second_read_strand = '+'
 
-                if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)).group() != 'None' or all_chromosomes) and \
-                                first_read_position is not None and second_read_position is not None:
-                    if abs(first_read_position - second_read_position) <= gap_threshold:
-                        output = True
-                        ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                        ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-                        ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                if first_read_chr:
+                    if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)) or all_chromosomes) and \
+                                    first_read_position is not None and second_read_position is not None:
+                        if abs(first_read_position - second_read_position) <= gap_threshold:
+                            output = True
+                            ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                            ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                            ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
 
-                        ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                        ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-                        ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                            ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                            ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                            ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
 
                 if output == True:
                     print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
@@ -155,21 +156,22 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
                         second_read_strand = second_read.iv.strand
 
             # We check whether or not the read was aligned by asking for 'first_read_chr'
-            if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)) != None or (all_chromosomes and first_read_chr)) and \
-                    ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position) <= gap_threshold) or
-                         (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position) <= gap_threshold)):
+            if first_read_chr:
+                if (first_read_chr == second_read_chr) and (pattern.match(str(first_read_chr)) or all_chromosomes) and \
+                        ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position) <= gap_threshold) or
+                             (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position) <= gap_threshold)):
 
-                # if first_read_chr in ref_chr and first_read_position and first_read_strand:
-                ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-                ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                #    output = True
+                    # if first_read_chr in ref_chr and first_read_position and first_read_strand:
+                    ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                    ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                    ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                    #    output = True
 
-                # if second_read_chr in ref_chr and second_read_position and second_read_strand:
-                ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-                ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                output = True
+                    # if second_read_chr in ref_chr and second_read_position and second_read_strand:
+                    ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                    ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                    ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                    output = True
 
             # Output read positions for plotting. Add gap.
             if output == True:
@@ -305,7 +307,7 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
 
     o1 = open(outfile_matched, 'w')
     print('Chromosome', 'Start', 'End', 'Name', 'ReadCount', 'Strand'  # 0:5
-          'PositionStart', 'PositionEnd', 'WindowName', 'WindowSequence',  # 6:9
+          'MappingPositionStart', 'MappingPositionEnd', 'WindowName', 'WindowSequence',  # 6:9
           'Site_SubstitutionsOnly.Sequence', 'Site_SubstitutionsOnly.NumSubstitutions',  # 10:11
           'Site_SubstitutionsOnly.Strand', 'Site_SubstitutionsOnly.Start', 'Site_SubstitutionsOnly.End',  # 12:14
           'Site_GapsAllowed.Sequence', 'Site_GapsAllowed.Length', 'Site_GapsAllowed.Score',  # 15:17
