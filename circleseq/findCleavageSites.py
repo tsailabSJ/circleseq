@@ -155,7 +155,7 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
                         second_read_strand = second_read.iv.strand
 
             # We check whether or not the read was aligned by asking for 'first_read_chr'
-            if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)).group() != 'None' or (all_chromosomes and first_read_chr)) and \
+            if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)) != None or (all_chromosomes and first_read_chr)) and \
                     ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position) <= gap_threshold) or
                          (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position) <= gap_threshold)):
 
