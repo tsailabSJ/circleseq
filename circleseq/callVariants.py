@@ -166,7 +166,7 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius
           'Variant_WindowSequence',
           'Variant_Site_SubstitutionsOnly.Sequence', 'Variant_Site_SubstitutionsOnly.NumSubstitutions',
           'Variant_Site_SubstitutionsOnly.Strand',
-          'Variant_Site_GapsAllowed.Sequence', 'Variant_Site_GapsAllowed.Length', 'Variant_Site_GapsAllowed.Score',
+          'Variant_Site_GapsAllowed.Sequence', 'Variant_Site_GapsAllowed.Length', 
           'Variant_Site_GapsAllowed.Substitutions', 'Variant_Site_GapsAllowed.Insertions', 'Variant_Site_GapsAllowed.Deletions',
           'Variant_Site_GapsAllowed.Strand',
           'Cell', 'Targetsite', 'TargetSequence', 'Variant_RealignedTargetSequence',
