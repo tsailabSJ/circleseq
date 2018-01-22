@@ -25,7 +25,7 @@ def snpCall(matched_file, reference, bam_file, out, search_radius):
         for line in f:
             site = line.strip().split('\t')
             #  site tag defined as Targetsite_Name
-            regions.append([site[0], int(site[1]) - search_radius, int(site[2]) + search_radius, '*', bam_file, '_'.join([site[26], site[3]])])
+            regions.append([site[0], int(site[6]) - search_radius, int(site[7]) + search_radius, '*', bam_file, '_'.join([site[26], site[3]])])
 
     print('Running samtools:mpileup for %s' % basename, file=sys.stderr)
     out_vcf = os.path.join(output_folder, basename + '_mpileup_output')
@@ -150,8 +150,8 @@ def arrayOffTargets(matched_file, search_radius):
             site = line.strip().split('\t')
 
             Chromosome = site[0]
-            start = int(site[1]) - search_radius
-            end = int(site[2]) + search_radius
+            start = int(site[6]) - search_radius
+            end = int(site[7]) + search_radius
             Name = site[3]
 
             offtargets_dict[Name] = site
@@ -228,7 +228,7 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius
 
             variant_ots_no_bulge, variant_ots_bulge = '', ''
 
-            #  get variant sequence if the off-target sequences changed by considering the variant window
+            #  get variant sequence if the off-target sequences have changed by considering the variant window
             if ots_nb != offtarget_sequence_no_bulge:
                 variant_flag = True
                 if chosen_alignment_strand_m == '+':
