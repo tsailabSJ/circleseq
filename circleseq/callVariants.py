@@ -24,7 +24,7 @@ def snpCall(matched_file, reference, bam_file, out, search_radius):
         f.readline()
         for line in f:
             site = line.strip().split('\t')
-            #  site tag defined as Targetsite_Name
+            #  chromosome, windowStart, windowEnd, strand, bam, region_basename (=Targetsite_Name)
             regions.append([site[0], int(site[6]) - search_radius, int(site[7]) + search_radius, '*', bam_file, '_'.join([site[26], site[3]])])
 
     print('Running samtools:mpileup for %s' % basename, file=sys.stderr)
@@ -35,8 +35,8 @@ def snpCall(matched_file, reference, bam_file, out, search_radius):
     process_mpileup = open(os.path.join(out_vcf, 'logFile_mpileup'), 'w')
 
     for item in regions:
-        chromosome, start, end, strand, bam_file, region_basename = item
-        region = '%s%s%s%s%s' % (chromosome, ":", int(start), "-", int(end))
+        chromosome, windowStart, windowEnd, strand, bam_file, region_basename = item
+        region = '%s%s%s%s%s' % (chromosome, ":", int(windowStart), "-", int(windowEnd))
         output = os.path.join(out_vcf, region_basename + '.vcf')
 
         cl_vcf = 'samtools mpileup -v --region %s --fasta-ref %s %s > %s' % (region, reference, bam_file, output)
@@ -156,6 +156,7 @@ def arrayOffTargets(matched_file, search_radius):
 
             offtargets_dict[Name] = site
 
+            #  create a genomic interval for each window sequence
             gi_dict[Name] = HTSeq.GenomicInterval(Chromosome, start, end, ".")
     return offtargets_dict, gi_dict
 
