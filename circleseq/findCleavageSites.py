@@ -5,7 +5,7 @@ import HTSeq
 import os
 import pyfaidx
 import regex
-import statsmodels
+from statsmodels.distributions.empirical_distribution import ECDF
 import sys
 
 
@@ -607,8 +607,9 @@ def compare(ref, bam, control, targetsite, search_radius, windowsize, mapq_thres
               'p_Value', 'narrow_p_Value', 'control_p_Value', 'control_narrow_p_Value', file=o, sep='\t')
 
         # Empirical cdf
-        ecdf_pos = statsmodels.distributions.empirical_distribution.ECDF(bg_position)
-        ecdf_nar = statsmodels.distributions.empirical_distribution.ECDF(bg_narrow)
+        print(bg_position, bg_narrow)
+        ecdf_pos = ECDF(bg_position)
+        ecdf_nar = ECDF(bg_narrow)
 
         # Genomic array to store the p-values for every chromosome:position object
         ga_pval = HTSeq.GenomicArray("auto", typecode='O', stranded=False)
