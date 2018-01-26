@@ -1,5 +1,5 @@
 argparse>=1.4.0
-subprocess>=3.2.7
+subprocess
 PyYAML>=3.11
 regex>=2018.01.10
 HTSeq>=0.6.1p1
