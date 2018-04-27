@@ -24,7 +24,8 @@ def snpCall(matched_file, reference, bam_file, out, search_radius):
         f.readline()
         for line in f:
             site = line.strip().split('\t')
-            regions.append([site[0], int(site[1]) - search_radius, int(site[2]) + search_radius, '*', bam_file, '_'.join([site[24], site[3]])])
+            #  chromosome, windowStart, windowEnd, strand, bam, region_basename (=Targetsite_Name)
+            regions.append([site[0], int(site[6]) - search_radius, int(site[7]) + search_radius, '*', bam_file, '_'.join([site[26], site[3]])])
 
     print('Running samtools:mpileup for %s' % basename, file=sys.stderr)
     out_vcf = os.path.join(output_folder, basename + '_mpileup_output')
@@ -34,8 +35,8 @@ def snpCall(matched_file, reference, bam_file, out, search_radius):
     process_mpileup = open(os.path.join(out_vcf, 'logFile_mpileup'), 'w')
 
     for item in regions:
-        chromosome, start, end, strand, bam_file, region_basename = item
-        region = '%s%s%s%s%s' % (chromosome, ":", int(start), "-", int(end))
+        chromosome, windowStart, windowEnd, strand, bam_file, region_basename = item
+        region = '%s%s%s%s%s' % (chromosome, ":", int(windowStart), "-", int(windowEnd))
         output = os.path.join(out_vcf, region_basename + '.vcf')
 
         cl_vcf = 'samtools mpileup -v --region %s --fasta-ref %s %s > %s' % (region, reference, bam_file, output)
@@ -149,23 +150,24 @@ def arrayOffTargets(matched_file, search_radius):
             site = line.strip().split('\t')
 
             Chromosome = site[0]
-            start = int(site[1]) - search_radius
-            end = int(site[2]) + search_radius
+            start = int(site[6]) - search_radius
+            end = int(site[7]) + search_radius
             Name = site[3]
 
             offtargets_dict[Name] = site
 
+            #  create a genomic interval for each window sequence
             gi_dict[Name] = HTSeq.GenomicInterval(Chromosome, start, end, ".")
     return offtargets_dict, gi_dict
 
 
 def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius):
     output_file = open(out + '_Variants.txt', 'w')
-    print('Chromosome', 'Start', 'End', 'Name', 'ReadCount',
+    print('Chromosome', 'Start', 'End', 'Name', 'ReadCount', 'Strand',
           'Variant_WindowSequence',
           'Variant_Site_SubstitutionsOnly.Sequence', 'Variant_Site_SubstitutionsOnly.NumSubstitutions',
           'Variant_Site_SubstitutionsOnly.Strand',
-          'Variant_Site_GapsAllowed.Sequence', 'Variant_Site_GapsAllowed.Length', 'Variant_Site_GapsAllowed.Score',
+          'Variant_Site_GapsAllowed.Sequence', 'Variant_Site_GapsAllowed.Length', 
           'Variant_Site_GapsAllowed.Substitutions', 'Variant_Site_GapsAllowed.Insertions', 'Variant_Site_GapsAllowed.Deletions',
           'Variant_Site_GapsAllowed.Strand',
           'Cell', 'Targetsite', 'TargetSequence', 'Variant_RealignedTargetSequence',
@@ -183,13 +185,13 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius
         gi = gi_offtargets[name]
 
         chromosome = site[0]
-        window_sequence = site[7]
+        window_sequence = site[9]
         window_sequence = window_sequence.upper()
-        cell, targetsite = site[23:25]
-        TargetSequence = site[26]
-        output01 = site[0:5]
+        cell, targetsite = site[25:27]
+        TargetSequence = site[28]
+        output01 = site[0:6]
         output03 = [cell, targetsite, TargetSequence]
-        ots_nb, ots_bu = site[8], site[13]
+        ots_nb, ots_bu = site[10], site[15]
 
         #  obtain variant window sequence
         wkey = '_'.join([basename, chromosome])
@@ -220,14 +222,14 @@ def snpAdjustment(matched_file, snp_file, out, mismatch_threshold, search_radius
         #  variant off-target sequences: only proceed if there is a variant in the window sequence
         window_sequence_var = window_sequence_variant.upper()
         if window_sequence_var != window_sequence:
-            offtarget_sequence_no_bulge, mismatches, chosen_alignment_strand_m, start_no_bulge, end_no_bulge, \
-            bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, \
-            chosen_alignment_strand_b, bulged_start, bulged_end, realigned_target = \
+            offtarget_sequence_no_bulge, mismatches, offtarget_sequence_length, chosen_alignment_strand_m, start_no_bulge, end_no_bulge, \
+            realigned_target, \
+            bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, chosen_alignment_strand_b, bulged_start, bulged_end = \
                 alignSequences(TargetSequence, window_sequence_var, max_score=mismatch_threshold)
 
             variant_ots_no_bulge, variant_ots_bulge = '', ''
 
-            #  get variant sequence if the off-target sequences changed by considering the variant window
+            #  get variant sequence if the off-target sequences have changed by considering the variant window
             if ots_nb != offtarget_sequence_no_bulge:
                 variant_flag = True
                 if chosen_alignment_strand_m == '+':
