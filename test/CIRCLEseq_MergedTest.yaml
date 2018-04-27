@@ -1,0 +1,21 @@
+reference_genome: data/input/CIRCLEseq_test_genome.fa
+analysis_folder: data/MergedOutput
+
+bwa: bwa
+samtools: samtools
+
+window_size: 3
+mapq_threshold: 50
+start_threshold: 1
+gap_threshold: 3
+mismatch_threshold: 6
+merged_analysis: True
+
+samples:
+    TestSample:
+        target: GAGTCCGAGCAGAAGAAGAANGG
+        read1: data/input/TEST.r1.fastq.gz
+        read2: data/input/TEST.r2.fastq.gz
+        controlread1: data/input/TEST_control.r1.fastq.gz
+        controlread2: data/input/TEST_control.r2.fastq.gz
+        description: TestCell

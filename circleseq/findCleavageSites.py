@@ -5,7 +5,7 @@ import HTSeq
 import os
 import pyfaidx
 import regex
-import statsmodels
+from statsmodels.distributions.empirical_distribution import ECDF
 import sys
 
 
@@ -61,17 +61,18 @@ def tabulate_merged_start_positions(BamFileName, cells, name, targetsite, mapq_t
                             second_read_position = cigar_operation.ref_iv.start + distance
                             second_read_strand = '+'
 
-                if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)).group() != 'None' or all_chromosomes) and \
-                                first_read_position is not None and second_read_position is not None:
-                    if abs(first_read_position - second_read_position) <= gap_threshold:
-                        output = True
-                        ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                        ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-                        ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                if first_read_chr:
+                    if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)) or all_chromosomes) and \
+                                    first_read_position is not None and second_read_position is not None:
+                        if abs(first_read_position - second_read_position) <= gap_threshold:
+                            output = True
+                            ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                            ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                            ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
 
-                        ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                        ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-                        ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                            ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                            ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                            ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
 
                 if output == True:
                     print(name, targetsite, cells, filename_base, first_read_chr, first_read_position,
@@ -154,21 +155,23 @@ def tabulate_start_positions(BamFileName, cells, name, targetsite, mapq_threshol
                         second_read_position = second_read.iv.start_d
                         second_read_strand = second_read.iv.strand
 
-            if first_read_chr == second_read_chr and (pattern.match(str(first_read_chr)).group() != 'None' or (all_chromosomes and first_read_chr)) and \
-                    ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position) <= gap_threshold) or
-                         (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position) <= gap_threshold)):
+            # We check whether or not the read was aligned by asking for 'first_read_chr'
+            if first_read_chr:
+                if (first_read_chr == second_read_chr) and (pattern.match(str(first_read_chr)) or all_chromosomes) and \
+                        ((first_read.iv.strand == '+' and second_read.iv.strand == '-' and abs(first_read_position - second_read_position) <= gap_threshold) or
+                             (second_read.iv.strand == '+' and first_read.iv.strand == '-' and abs(second_read_position - first_read_position) <= gap_threshold)):
 
-                # if first_read_chr in ref_chr and first_read_position and first_read_strand:
-                ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
-                ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
-                #    output = True
+                    # if first_read_chr in ref_chr and first_read_position and first_read_strand:
+                    ga[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                    ga_windows[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] = 1
+                    ga_stranded[HTSeq.GenomicPosition(first_read_chr, first_read_position, first_read_strand)] += 1
+                    #    output = True
 
-                # if second_read_chr in ref_chr and second_read_position and second_read_strand:
-                ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
-                ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
-                output = True
+                    # if second_read_chr in ref_chr and second_read_position and second_read_strand:
+                    ga[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                    ga_windows[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] = 1
+                    ga_stranded[HTSeq.GenomicPosition(second_read_chr, second_read_position, second_read_strand)] += 1
+                    output = True
 
             # Output read positions for plotting. Add gap.
             if output == True:
@@ -221,10 +224,10 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
         if value:
             window_sequence = get_sequence(reference_genome, iv.chrom, iv.start - search_radius, iv.end + search_radius)
 
-            offtarget_sequence_no_bulge, mismatches, chosen_alignment_strand_m, start_no_bulge, end_no_bulge, \
-            bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, \
-            chosen_alignment_strand_b, bulged_start, bulged_end, realigned_target = \
-            alignSequences(target_sequence, window_sequence, max_score=mismatch_threshold)
+            offtarget_sequence_no_bulge, mismatches, offtarget_sequence_length, chosen_alignment_strand_m, start_no_bulge, end_no_bulge, \
+            realigned_target, \
+            bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, chosen_alignment_strand_b, bulged_start, bulged_end = \
+                alignSequences(target_sequence, window_sequence, max_score=mismatch_threshold)
 
             # get genomic coordinates of sequences
             mm_start, mm_end, b_start, b_end = '', '', '', ''
@@ -242,19 +245,19 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                 b_start = iv.end + search_radius - int(bulged_end)
                 b_end = iv.end + search_radius - int(bulged_start)
 
-            #  define overall start and end position, only for annotation
-            if offtarget_sequence_no_bulge and bulged_offtarget_sequence:
-                target_start_absolute = min(mm_start, b_start)
-                target_end_absolute = max(mm_end, b_end)
-            elif offtarget_sequence_no_bulge and not bulged_offtarget_sequence:
+            #  define overall start, end and strand. For bed annotation purposes
+            if offtarget_sequence_no_bulge:
                 target_start_absolute = mm_start
                 target_end_absolute = mm_end
+                target_strand_absolute = chosen_alignment_strand_m
             elif not offtarget_sequence_no_bulge and bulged_offtarget_sequence:
                 target_start_absolute = b_start
                 target_end_absolute = b_end
+                target_strand_absolute = chosen_alignment_strand_b
             else:
                 target_start_absolute = iv.start
                 target_end_absolute = iv.end
+                target_strand_absolute = '*'
 
             name = iv.chrom + ':' + str(target_start_absolute) + '-' + str(target_end_absolute)
             read_count = int(max(set(narrow_ga[iv])))
@@ -267,8 +270,8 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                     reads_dict[tag] = read_count
                     window_min[tag] = [iv.start]
                     window_max[tag] = [iv.end]
-                    matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute,
-                                         iv.start, iv.end, name, read_count, iv, iv.chrom, window_sequence,
+                    matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, read_count, target_strand_absolute,
+                                         iv.start, iv.end, iv, window_sequence,
                                          offtarget_sequence_no_bulge, mismatches,
                                          chosen_alignment_strand_m, mm_start, mm_end,
                                          bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
@@ -279,9 +282,8 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                     reads_dict[tag] = max(current_read_count, read_count) 
                     window_min[tag].append(iv.start)
                     window_max[tag].append(iv.end)
-                    matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute,
-                                         min(window_min[tag]), max(window_max[tag]), name, reads_dict[tag],
-                                         iv, iv.chrom, window_sequence,
+                    matched_dict[tag] = [iv.chrom, target_start_absolute, target_end_absolute, name, read_count, target_strand_absolute,
+                                         min(window_min[tag]), max(window_max[tag]), iv, window_sequence,
                                          offtarget_sequence_no_bulge, mismatches,
                                          chosen_alignment_strand_m, mm_start, mm_end,
                                          bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
@@ -289,8 +291,8 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
                                          filename, target_cells, target_name, full_name, target_sequence, realigned_target]
             else:
                 untag = iv.chrom + ':' + str(iv.start)
-                unmatched_dict[untag] = [iv.chrom, target_start_absolute, target_end_absolute,
-                                         iv.start, iv.end, name, read_count, iv, iv.chrom,  window_sequence,
+                unmatched_dict[untag] = [iv.chrom, target_start_absolute, target_end_absolute, name, read_count, target_strand_absolute,
+                                         iv.start, iv.end, iv, window_sequence,
                                          offtarget_sequence_no_bulge, mismatches,
                                          chosen_alignment_strand_m, mm_start, mm_end,
                                          bulged_offtarget_sequence, length, score, substitutions, insertions, deletions,
@@ -304,15 +306,15 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
     outfile_matched = '{0}_identified_matched.txt'.format(out)
 
     o1 = open(outfile_matched, 'w')
-    print('Chromosome', 'Start', 'End', 'Name', 'ReadCount',
-          'WindowName', 'WindowChromosome', 'WindowSequence',
-          'Site_SubstitutionsOnly.Sequence', 'Site_SubstitutionsOnly.NumSubstitutions',
-          'Site_SubstitutionsOnly.Strand', 'Site_SubstitutionsOnly.Start', 'Site_SubstitutionsOnly.End',
-          'Site_GapsAllowed.Sequence', 'Site_GapsAllowed.Length', 'Site_GapsAllowed.Score',
-          'Site_GapsAllowed.Substitutions', 'Site_GapsAllowed.Insertions', 'Site_GapsAllowed.Deletions',
-          'Site_GapsAllowed.Strand', 'Site_GapsAllowed.Start', 'Site_GapsAllowed.End',
-          'FileName', 'Cell', 'Targetsite', 'FullName', 'TargetSequence', 'RealignedTargetSequence',
-          'Position.Pvalue', 'Narrow.Pvalue', 'Position.Control.Pvalue', 'Narrow.Control.Pvalue',
+    print('Chromosome', 'Start', 'End', 'Name', 'ReadCount', 'Strand',  # 0:5
+          'MappingPositionStart', 'MappingPositionEnd', 'WindowName', 'WindowSequence',  # 6:9
+          'Site_SubstitutionsOnly.Sequence', 'Site_SubstitutionsOnly.NumSubstitutions',  # 10:11
+          'Site_SubstitutionsOnly.Strand', 'Site_SubstitutionsOnly.Start', 'Site_SubstitutionsOnly.End',  # 12:14
+          'Site_GapsAllowed.Sequence', 'Site_GapsAllowed.Length', 'Site_GapsAllowed.Score',  # 15:17
+          'Site_GapsAllowed.Substitutions', 'Site_GapsAllowed.Insertions', 'Site_GapsAllowed.Deletions',  # 18:20
+          'Site_GapsAllowed.Strand', 'Site_GapsAllowed.Start', 'Site_GapsAllowed.End',  #21:23
+          'FileName', 'Cell', 'Targetsite', 'FullName', 'TargetSequence', 'RealignedTargetSequence',  # 24:29
+          'Position.Pvalue', 'Narrow.Pvalue', 'Position.Control.Pvalue', 'Narrow.Control.Pvalue',  # 30:33
           sep='\t', file=o1)
     o1.close()
 
@@ -336,7 +338,7 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
             control_pval_pos = min(control_pos_pval_list)
             control_pval_nar = min(control_nar_pval_list)
 
-            print(*([row[0]] + row[3:] + [pval_pos, pval_nar, control_pval_pos, control_pval_nar]), sep='\t', file=o1)
+            print(*(row + [pval_pos, pval_nar, control_pval_pos, control_pval_nar]), sep='\t', file=o1)
 
     # Write unmatched table
     print("Writing unmatched table", file=sys.stderr)
@@ -363,7 +365,7 @@ def output_alignments(narrow_ga, ga_windows, reference_genome, target_sequence, 
             un_control_pval_pos = min(un_control_pos_pval_list)
             un_control_pval_nar = min(un_control_nar_pval_list)
 
-            print(*([unrow[0]] + unrow[3:] + [un_pval_pos, un_pval_nar, un_control_pval_pos, un_control_pval_nar]), sep='\t', file=o2)
+            print(*(unrow + [un_pval_pos, un_pval_nar, un_control_pval_pos, un_control_pval_nar]), sep='\t', file=o2)
 
 
 """ Reverse complement DNA sequence
@@ -402,14 +404,20 @@ def regexFromSequence(seq, lookahead=True, indels=1, errors=7):
     pattern_gap = pattern + '{{i<={0},d<={0},s<={1},3i+3d+1s<={1}}}'.format(indels, errors)
     return pattern_standard, pattern_gap
 
-
-def extendedPattern(seq, errors, indels=1):
+"""
+Allow for '-' in our search, but do not allow insertions or deletions. 
+"""
+def extendedPattern(seq, errors):
     IUPAC_notation_regex_extended = {'N': '[ATCGN]','-': '[ATCGN]','Y': '[CTY]','R': '[AGR]','W': '[ATW]','S': '[CGS]','A': 'A','T': 'T','C': 'C','G': 'G'}
     realign_pattern = ''
     for c in seq:
         realign_pattern += IUPAC_notation_regex_extended[c]
-    return '(?b:' + realign_pattern + ')' + '{{i<={0},d<={0},s<={1},3i+3d+1s<={1}}}'.format(indels, errors)
+    return '(?b:' + realign_pattern + ')' + '{{s<={0}}}'.format(errors)
 
+"""
+Recreate A!!! sequence in the window_sequence that matches the conditions given for the fuzzy regex. 
+Currently only working for off-targets with at most one bulge !!! 
+"""
 def realignedSequences(targetsite_sequence, chosen_alignment, errors):
     match_sequence = chosen_alignment.group()
     substitutions, insertions, deletions = chosen_alignment.fuzzy_counts
@@ -417,7 +425,8 @@ def realignedSequences(targetsite_sequence, chosen_alignment, errors):
     # get the .fuzzy_counts associated to the matching sequence after adjusting for indels, where 0 <= INS, DEL <= 1
     realigned_fuzzy = (substitutions, max(0, insertions - 1), max(0, deletions - 1))
 
-    if insertions:  # DNA-bulge
+    #  recreate the target sequence, with a '-' in the case of an DNA-bulge
+    if insertions:
         targetsite_realignments = [targetsite_sequence[:i] + '-' + targetsite_sequence[i:] for i in range(1, len(targetsite_sequence))]
     else:
         targetsite_realignments = [targetsite_sequence]
@@ -425,7 +434,8 @@ def realignedSequences(targetsite_sequence, chosen_alignment, errors):
     realigned_target_sequence, realigned_offtarget_sequence = None, ''  # in case the matching sequence is not founded
 
     for seq in targetsite_realignments:
-        if deletions:  # RNA-bulge
+        # recreate off-target sequence (with a '-' in the case of an RNA-bulge) and pattern matching the realigned target sequence
+        if deletions:
             match_realignments = [match_sequence[:i + 1] + '-' + match_sequence[i + 1:] for i in range(len(match_sequence) - 1)]
             match_pattern = [match_sequence[:i + 1] + seq[i + 1] + match_sequence[i + 1:] for i in range(len(match_sequence) - 1)]
         else:
@@ -441,7 +451,7 @@ def realignedSequences(targetsite_sequence, chosen_alignment, errors):
 
 """
 Given a targetsite and window, use a fuzzy regex to align the targetsite to
-the window. Returns the best match.
+the window. Returns the best match(es).
 """
 def alignSequences(targetsite_sequence, window_sequence, max_score=7):
 
@@ -458,6 +468,7 @@ def alignSequences(targetsite_sequence, window_sequence, max_score=7):
     lowest_distance_score, lowest_mismatch = 100, max_score + 1
     chosen_alignment_b, chosen_alignment_m, chosen_alignment_strand_b, chosen_alignment_strand_m = None, None, '', ''
 
+    # Use regex to find the best match allowing only for mismatches
     for aln_m in alignments_mm:
         strand_m, alignment_type_m, match_m = aln_m
         if match_m != None:
@@ -467,6 +478,8 @@ def alignSequences(targetsite_sequence, window_sequence, max_score=7):
                 chosen_alignment_strand_m = strand_m
                 lowest_mismatch = mismatches
 
+    # Use regex to find the best match allowing for gaps, so that its edit distance is strictly lower than the
+    # total number of mismatches of the sequence founded (if any) allowing only for mismatches.
     for aln_b in alignments_bulge:
         strand_b, alignment_type_b, match_b = aln_b
         if match_b != None:
@@ -500,8 +513,9 @@ def alignSequences(targetsite_sequence, window_sequence, max_score=7):
         else:
             chosen_alignment_strand_b = ''
 
-    return [offtarget_sequence_no_bulge, mismatches, chosen_alignment_strand_m, start_no_bulge, end_no_bulge,
-            bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, chosen_alignment_strand_b, bulged_start, bulged_end, realigned_target]
+    return [offtarget_sequence_no_bulge, mismatches, len(offtarget_sequence_no_bulge), chosen_alignment_strand_m, start_no_bulge, end_no_bulge,
+            realigned_target,
+            bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, chosen_alignment_strand_b, bulged_start, bulged_end]
 
 
 """ Get sequences from some reference genome
@@ -593,8 +607,9 @@ def compare(ref, bam, control, targetsite, search_radius, windowsize, mapq_thres
               'p_Value', 'narrow_p_Value', 'control_p_Value', 'control_narrow_p_Value', file=o, sep='\t')
 
         # Empirical cdf
-        ecdf_pos = statsmodels.distributions.empirical_distribution.ECDF(bg_position)
-        ecdf_nar = statsmodels.distributions.empirical_distribution.ECDF(bg_narrow)
+        print(bg_position, bg_narrow)
+        ecdf_pos = ECDF(bg_position)
+        ecdf_nar = ECDF(bg_narrow)
 
         # Genomic array to store the p-values for every chromosome:position object
         ga_pval = HTSeq.GenomicArray("auto", typecode='O', stranded=False)
