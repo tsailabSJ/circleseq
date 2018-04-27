@@ -5,11 +5,11 @@ from distutils.core import setup
 
 setup(
     name='circleseq',
-    version='0.1.0',
+    version='1.1',
     description="An easy to use bioinformatic pipeline for the CIRCLE-seq assay.",
-    author="Shengdar Q Tsai, Martin Aryee, Ved V Topkar",
-    author_email='STSAI4@mgh.harvard.edu, Aryee.Martin@mgh.harvard.edu, vedtopkar@gmail.com',
-    url='https://github.com/aryeelab/circleseq',
+    author="Shengdar Q Tsai, Martin Aryee, Ved V Topkar, Jose Malagon-Lopez",
+    author_email='STSAI4@mgh.harvard.edu, Aryee.Martin@mgh.harvard.edu, vedtopkar@gmail.com, jose.lopez@mail.harvard.edu',
+    url='https://github.com/tsailabSJ/circleseq',
     packages=[
         'circleseq',
     ],

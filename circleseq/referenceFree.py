@@ -44,17 +44,12 @@ def analyze(fastq1_filename, fastq2_filename, targetsite, out_base, name='', cel
         joined_seq = reverseComplement(r1_sequence) + r2_sequence
         truncated_joined_seq = joined_seq[130:170]
 
-        offtarget_sequence_no_bulge, mismatches, chosen_alignment_strand_m, start_no_bulge, end_no_bulge, \
-        bulged_offtarget_sequence, length, score, substitutions, insertions, deletions, \
-        chosen_alignment_strand_b, bulged_start, bulged_end, realigned_target = \
-        alignSequences(targetsite, truncated_joined_seq, max_score=mismatch_threshold)
+        sequence_data = alignSequences(targetsite, truncated_joined_seq, max_score=mismatch_threshold)
+        offtarget, mismatch, length, strand, start, end, realigned_target = sequence_data[:7]
 
-        if offtarget_sequence_no_bulge:
-            c[offtarget_sequence_no_bulge] += 1
-            d[offtarget_sequence_no_bulge].append(joined_seq)
-        elif not offtarget_sequence_no_bulge and bulged_offtarget_sequence:
-            c[bulged_offtarget_sequence] += 1
-            d[bulged_offtarget_sequence].append(joined_seq)
+        if offtarget:
+            c[offtarget] += 1
+            d[offtarget].append(joined_seq)
 
         read_count += 1
         if not read_count % 100000:
@@ -73,7 +68,6 @@ def analyze(fastq1_filename, fastq2_filename, targetsite, out_base, name='', cel
                     j += 1
                     print('>{0:04d}_{1}_{2}'.format(target_count, target_sequence, j), file=off_target_fasta_file)
                     print(sequence, file=off_target_fasta_file)
-
 
 def join_write_output(fastq1_filename, fastq2_filename, out):
     fastq1_file = fq(fastq1_filename)

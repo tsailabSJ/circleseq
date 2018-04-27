@@ -99,7 +99,7 @@ Below is an example ``manifest.yaml`` file::
 
 
 ### Writing A Manifest File<a name="write_manifest"></a>
-When running the end-to-end analysis functionality of the circleseq package, a number of inputs are required. To simplify the formatting of these inputs and to encourage reproducibility, these parameters are inputted into the pipeline via a manifest formatted as a YAML file. YAML files allow easy-to-read specification of key-value pairs. This allows us to easily specify our parameters. The following fields are required in the manifest:
+When running the end-to-end analysis functionality of the circleseq package a number of inputs are required. To simplify the formatting of these inputs and to encourage reproducibility, these parameters are inputted into the pipeline via a manifest formatted as a YAML file. YAML files allow easy-to-read specification of key-value pairs. This allows us to easily specify our parameters. The following fields are required in the manifest:
 
 - `reference_genome`: The absolute path to the reference genome FASTA file.
 - `output_folder`: The absolute path to the folder in which all pipeline outputs will be saved.

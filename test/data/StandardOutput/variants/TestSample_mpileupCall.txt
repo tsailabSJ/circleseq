@@ -1,0 +1,4 @@
+targetsite	site_name	chromosome	one_based_position	reference	variant	quality	genotype	depth	PL
+TestSample	TestSample_12:10000-10023	12	10000	A	T	162.998	1|1	25	196_75_0
+TestSample	TestSample_12:10000-10023	12	10025	A	G	119.008	0|1	23	149_0_159
+TestSample	TestSample_4:10000-10023	4	10010	T	C	162.998	1|1	23	196_69_0

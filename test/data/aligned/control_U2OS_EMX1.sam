@@ -1,4 +1,0 @@
-@SQ	SN:2	LN:2178
-@SQ	SN:8	LN:2023
-@SQ	SN:11	LN:2023
-@PG	ID:bwa	PN:bwa	VN:0.7.13-r1126	CL:bwa mem input_data/CIRCLEseq_test_genome.fa test_output/fastq/control_U2OS_EMX1_merged.fastq.gz
